@@ -68,7 +68,7 @@ class migration_helpers {
             'Tipo de sala'
         );
         
-        self::save_course_custom_field($cid, 'restricoes_de_autoinscricao', 'Restrições de autoinscrição', 'textarea', '{}');
+        self::save_course_custom_field($cid, 'restricoes_de_autoinscricao', 'Restrições de autoinscrição');
     }
 }
 

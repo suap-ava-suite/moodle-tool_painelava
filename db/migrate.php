@@ -61,14 +61,9 @@ class migration_helpers {
             ['sortorder' => get_last_sort_order('customfield_category'), 'itemid' => 0, 'contextid' => 1, 'descriptionformat' => 0, 'timecreated' => time(), 'timemodified' => time()]
         )->id;
 
-        self::save_course_custom_field($cid, 'curso_autoinscricao', 'Curso aceita autoinscrição', 'checkbox');
-        self::save_course_custom_field(
-            $cid,
-            'sala_tipo',
-            'Tipo de sala'
-        );
-        
-        self::save_course_custom_field($cid, 'restricoes_de_autoinscricao', 'Restrições de autoinscrição', 'textarea', '{}');
+        self::save_course_custom_field($cid, 'sala_tipo', 'Tipo de sala');
+        self::save_course_custom_field($cid, 'turma_autoinscricao', 'Turma aceita autoinscrição', 'checkbox');
+        self::save_course_custom_field($cid, 'restricoes_de_autoinscricao', 'Restrições de autoinscrição');
     }
 }
 

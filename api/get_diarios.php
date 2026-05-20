@@ -181,19 +181,20 @@ class get_diarios_service extends \tool_painelava\service
         global $DB, $CFG;
         $autoinscricoes = [];
 
-        $campo_sala = $DB->get_record('customfield_field', ['shortname' => 'sala_tipo']);
-        if (!$campo_sala) return $autoinscricoes;
+        // AGORA BUSCAMOS PELO CAMPO DE RESTRIÇÕES, E NÃO MAIS PELO SALA_TIPO
+        $campo_restricao = $DB->get_record('customfield_field', ['shortname' => 'restricoes_de_autoinscricao']);
+        if (!$campo_restricao) return $autoinscricoes;
 
-        // Cursos visíveis marcados com "autoinscricoes"
+        // Cursos visíveis que possuam ALGUMA COISA escrita no campo de restrições
         $sql_vitrine = "SELECT c.id, c.fullname, c.shortname
                         FROM {course} c
                         JOIN {customfield_data} d ON d.instanceid = c.id
-                        WHERE d.fieldid = ? AND d.charvalue = ? AND c.visible = 1";
+                        WHERE d.fieldid = ? AND c.visible = 1 
+                          AND (d.charvalue != '' OR d.value IS NOT NULL AND d.value != '')";
                         
-        $cursos_vitrine = $DB->get_records_sql($sql_vitrine, [$campo_sala->id, 'autoinscricoes']);
+        $cursos_vitrine = $DB->get_records_sql($sql_vitrine, [$campo_restricao->id]);
         if (empty($cursos_vitrine)) return $autoinscricoes;
             
-        // Busca a NOVA regra e os campos customizados
         $vitrine_ids = array_column($cursos_vitrine, 'id');
         $campos_vitrine = ['restricoes_de_autoinscricao', 'turma_ano_periodo', 'disciplina_id', 'disciplina_descricao', 'disciplina_sigla', 'curso_codigo', 'curso_descricao', 'diario_id'];
         
@@ -207,14 +208,12 @@ class get_diarios_service extends \tool_painelava\service
         // Monta os cursos da vitrine
         foreach ($cursos_vitrine as $curso_vitrine) {
 
-            // Lê as restrições e injeta direto como array no objeto JSON
-            $json_restricoes_str = $cf_vitrine[$curso_vitrine->id]['restricoes_de_autoinscricao'] ?? '';
-            $texto_limpo_restricoes = html_entity_decode(strip_tags($json_restricoes_str), ENT_QUOTES, 'UTF-8');
-            $restricoes = json_decode($texto_limpo_restricoes, true) ?: [];
+            // Lê as restrições e limpa as tags HTML que o editor do Moodle costuma colocar (ex: <p>, <br>)
+            $restricoes_str = $cf_vitrine[$curso_vitrine->id]['restricoes_de_autoinscricao'] ?? '';
+            $texto_limpo_restricoes = trim(html_entity_decode(strip_tags($restricoes_str), ENT_QUOTES, 'UTF-8'));
 
-            $curso_vitrine->restricoes_de_autoinscricao = $restricoes;
+            $curso_vitrine->restricoes_de_autoinscricao = $texto_limpo_restricoes;
 
-            // Injeta os demais campos customizados
             $this->inject_custom_fields($curso_vitrine, $cf_vitrine[$curso_vitrine->id] ?? []);
 
             $curso_vitrine->is_enrolled = isset($mapa_matriculados[$curso_vitrine->id]);
@@ -308,9 +307,7 @@ class get_diarios_service extends \tool_painelava\service
 
         // Adiciona apenas os cursos da vitrine que o aluno AINDA NÃO está matriculado
         foreach ($vitrine as $curso_vitrine) {
-            if (!$curso_vitrine->is_enrolled) {
-                $agrupamentos['autoinscricoes'][] = $curso_vitrine;
-            }
+            $agrupamentos['autoinscricoes'][] = $curso_vitrine;
         }
 
         $return_base = [

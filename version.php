@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'tool_painelava';
-$plugin->version   = 2026051100;
+$plugin->version   = 2026052000;
 $plugin->requires  = 2024100710; // Moodle 4.5 or later.
 $plugin->maturity  = MATURITY_STABLE;
 $plugin->release   = '4.5.02';

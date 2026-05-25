@@ -94,6 +94,8 @@ class enrol_course_service extends \tool_painelava\service
             
             $plugin->update_user_enrol($enrol_instance, $USER->id, 0);
 
+            \tool_painelava\group_helper::ensure_user_in_profile_based_group($courseid, $USER->id);
+
             return [
                 "status" => "reactivated",
                 "message" => "Sua inscrição foi reativada. Seu progresso anterior foi recuperado.",
@@ -111,6 +113,8 @@ class enrol_course_service extends \tool_painelava\service
 
         $plugin = enrol_get_plugin('manual');
         $plugin->enrol_user($enrol, $USER->id, 5);
+
+        \tool_painelava\group_helper::ensure_user_in_profile_based_group($courseid, $USER->id);
 
         return [
             "status" => "enrolled",

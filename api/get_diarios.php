@@ -281,19 +281,22 @@ class get_diarios_service extends \tool_painelava\service
             $cf_dados = $cfs_matriculados[$diario->id] ?? [];
             $this->inject_custom_fields($curso_limpo, $cf_dados);
 
-            $sala_tipo = !empty($cf_dados['sala_tipo']) ? strtolower(trim($cf_dados['sala_tipo'])) : 'diarios';
+            $sala_tipo_original = !empty($cf_dados['sala_tipo']) ? strtolower(trim($cf_dados['sala_tipo'])) : 'diarios';
 
-            if (!isset($agrupamentos[$sala_tipo])) {
-                $agrupamentos[$sala_tipo] = [];
+            // REGRA: Se está matriculado em um curso de autoinscrição, ele deve aparecer nos diários
+            $target_aba = ($sala_tipo_original === 'autoinscricoes') ? 'diarios' : $sala_tipo_original;
+
+            if (!isset($agrupamentos[$target_aba])) {
+                $agrupamentos[$target_aba] = [];
             }
 
-            // sala_tipo "diarios" passa por filtros de busca, os demais tipos entram direto sem filtros
-            if ($sala_tipo === 'diarios') {
+            // Aplica os filtros apenas se o destino for a aba de diários
+            if ($target_aba === 'diarios') {
                 if ($this->atende_filtros($curso_limpo, $filtros_busca)) {
-                    $agrupamentos[$sala_tipo][] = $curso_limpo;
+                    $agrupamentos['diarios'][] = $curso_limpo;
                 }
             } else {
-                $agrupamentos[$sala_tipo][] = $curso_limpo;
+                $agrupamentos[$target_aba][] = $curso_limpo;
             }
         }
 
@@ -305,7 +308,6 @@ class get_diarios_service extends \tool_painelava\service
             $agrupamentos['autoinscricoes'] = [];
         }
 
-        // Adiciona apenas os cursos da vitrine que o aluno AINDA NÃO está matriculado
         foreach ($vitrine as $curso_vitrine) {
             $agrupamentos['autoinscricoes'][] = $curso_vitrine;
         }

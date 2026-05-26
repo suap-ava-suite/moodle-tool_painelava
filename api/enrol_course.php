@@ -28,6 +28,7 @@ class enrol_course_service extends \tool_painelava\service
         $firstname = \tool_painelava\aget($_GET, 'firstname', 'Aluno');
         $lastname  = \tool_painelava\aget($_GET, 'lastname', 'SUAP');
         $email     = \tool_painelava\aget($_GET, 'email', "{$username}@sememail.ifrn.edu.br");
+        $campus    = \tool_painelava\aget($_GET, 'campus', '');
 
         if (empty($username) || empty($courseid)) {
             throw new \Exception("Username e CourseID são obrigatórios.", 400);
@@ -53,6 +54,17 @@ class enrol_course_service extends \tool_painelava\service
             $newuser->suspended  = 0;
 
             $newuser_id = user_create_user($newuser);
+
+            if (!empty($campus)) {
+                require_once($CFG->dirroot . '/user/profile/lib.php');
+                
+                $profiledata = new \stdClass();
+                $profiledata->id = $newuser_id;
+                $profiledata->profile_field_campus_sigla = $campus; 
+                
+                profile_save_data($profiledata);
+            }
+
             $USER = $DB->get_record('user', ['id' => $newuser_id], '*', MUST_EXIST);
 
             $default_prefs_string = get_config('local_suap', 'default_user_preferences');
@@ -94,6 +106,8 @@ class enrol_course_service extends \tool_painelava\service
             
             $plugin->update_user_enrol($enrol_instance, $USER->id, 0);
 
+            \tool_painelava\group_helper::ensure_user_in_profile_based_group($courseid, $USER->id);
+
             return [
                 "status" => "reactivated",
                 "message" => "Sua inscrição foi reativada. Seu progresso anterior foi recuperado.",
@@ -111,6 +125,8 @@ class enrol_course_service extends \tool_painelava\service
 
         $plugin = enrol_get_plugin('manual');
         $plugin->enrol_user($enrol, $USER->id, 5);
+
+        \tool_painelava\group_helper::ensure_user_in_profile_based_group($courseid, $USER->id);
 
         return [
             "status" => "enrolled",

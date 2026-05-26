@@ -36,8 +36,8 @@ function get_last_sort_order($tablename)
         throw new \coding_exception('Invalid table name provided to get_last_sort_order().');
     }
 
-    $l = $DB->get_record_sql('SELECT coalesce(max(sortorder), 0) + 1 as sortorder from {' . $tablename . '}');
-    return $l->sortorder;
+    $lastsortorderrecord = $DB->get_record_sql('SELECT coalesce(max(sortorder), 0) + 1 as sortorder from {' . $tablename . '}');
+    return $lastsortorderrecord->sortorder;
 }
 
 

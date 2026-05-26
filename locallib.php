@@ -36,14 +36,19 @@ function get_last_sort_order($tablename)
         throw new \coding_exception('Invalid table name provided to get_last_sort_order().');
     }
 
-    $l = $DB->get_record_sql('SELECT coalesce(max(sortorder), 0) + 1 as sortorder from {' . $tablename . '}');
-    return $l->sortorder;
+    $lastsortorderrecord = $DB->get_record_sql('SELECT coalesce(max(sortorder), 0) + 1 as sortorder from {' . $tablename . '}');
+    return $lastsortorderrecord->sortorder;
 }
 
 
 function get_or_create($tablename, $keys, $values)
 {
     global $DB;
+
+    if (!\is_string($tablename) || !\preg_match('/^[a-z][a-z0-9_]*$/i', $tablename)) {
+        throw new \coding_exception('Invalid table name provided to get_or_create().');
+    }
+
     $record = $DB->get_record($tablename, $keys);
     if (!$record) {
         $record = (object)array_merge($keys, $values);
@@ -70,8 +75,13 @@ function get_recordset_as_array($sql, $params)
     global $DB;
 
     $result = [];
-    foreach ($DB->get_recordset_sql($sql, $params) as $disciplina) {
-        $result[] = $disciplina;
+    $recordset = $DB->get_recordset_sql($sql, $params);
+    try {
+        foreach ($recordset as $disciplina) {
+            $result[] = $disciplina;
+        }
+    } finally {
+        $recordset->close();
     }
     return $result;
 }

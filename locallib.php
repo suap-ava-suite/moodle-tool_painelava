@@ -70,8 +70,13 @@ function get_recordset_as_array($sql, $params)
     global $DB;
 
     $result = [];
-    foreach ($DB->get_recordset_sql($sql, $params) as $disciplina) {
-        $result[] = $disciplina;
+    $recordset = $DB->get_recordset_sql($sql, $params);
+    try {
+        foreach ($recordset as $disciplina) {
+            $result[] = $disciplina;
+        }
+    } finally {
+        $recordset->close();
     }
     return $result;
 }

@@ -14,7 +14,7 @@ class group_helper {
      * @param string $fieldshortname Nome curto do campo de perfil (default 'Campus_sigla')
      * @return void
      */
-    public static function ensure_user_in_profile_based_group(int $courseid, int $userid, string $fieldshortname = 'Campus_sigla'): void {
+    public static function ensure_user_in_profile_based_group(int $courseid, int $userid, string $fieldshortname = 'campus_sigla'): void {
         global $CFG, $DB;
         
         require_once($CFG->dirroot . '/group/lib.php');
@@ -23,13 +23,18 @@ class group_helper {
 
         // 1. Verifica se o curso aceita autoinscrição via campo customizado (API nativa)
         // Premissa: 'turma_autoinscricao' é um Moodle Course Custom Field.
-        $handler = \core_course\customfield\course_handler::create();
-        $customfields = $handler->export_instance_data_object($courseid);
-        
-        $is_autoinscricao = !empty($customfields->turma_autoinscricao) ? (bool) $customfields->turma_autoinscricao : false;
-        
-        if (!$is_autoinscricao) {
-            return; // Sai silenciosamente: regra não se aplica a este curso.
+        $sql = "SELECT cdata.value 
+        FROM {customfield_data} cdata
+        JOIN {customfield_field} cfield ON cdata.fieldid = cfield.id
+        WHERE cdata.instanceid = :courseid AND cfield.shortname = :shortname";
+
+        $is_autoinscricao = $DB->get_field_sql($sql, [
+            'courseid' => $courseid, 
+            'shortname' => 'turma_autoinscricao' // Certifique-se de que este é o shortname exato
+        ]);
+
+        if (!(bool)$is_autoinscricao) {
+            return;
         }
 
         // 2. Busca o valor do campo de perfil customizado do usuário

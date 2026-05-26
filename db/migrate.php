@@ -43,12 +43,12 @@ class migration_helpers {
         );
     }
 
-    public static function save_user_custom_field($categoryid, $shortname, $name, $datatype = 'text', $visible = 1, $p1 = NULL, $p2 = NULL)
+    public static function save_user_custom_field($categoryid, $shortname, $name, $datatype = 'text', $visible = 1, $param1value = NULL, $param2value = NULL)
     {
         return get_or_create(
             'user_info_field',
             ['shortname' => $shortname],
-            ['categoryid' => $categoryid, 'name' => $name, 'description' => $name, 'descriptionformat' => 2, 'datatype' => $datatype, 'visible' => $visible, 'param1' => $p1, 'param2' => $p2]
+            ['categoryid' => $categoryid, 'name' => $name, 'description' => $name, 'descriptionformat' => 2, 'datatype' => $datatype, 'visible' => $visible, 'param1' => $param1value, 'param2' => $param2value]
         );
     }
 

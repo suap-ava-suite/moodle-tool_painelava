@@ -2,11 +2,6 @@
 
 namespace tool_painelava;
 
-// Desabilita verificação CSRF para esta API
-if (!defined('NO_MOODLE_COOKIES')) {
-    define('NO_MOODLE_COOKIES', true);
-}
-
 require_once('../../../../config.php');
 global $CFG;
 require_once($CFG->dirroot . '/course/externallib.php');
@@ -23,6 +18,8 @@ class set_favourite_course_service extends \tool_painelava\service
         $username  = \tool_painelava\aget($_GET, 'username', '');
         $courseid  = \tool_painelava\aget($_GET, 'courseid', 0);
         $favourite = \tool_painelava\aget($_GET, 'favourite', 0);
+
+        require_sesskey();
 
         $username = trim((string)$username);
         $username = \core_text::strtolower($username);

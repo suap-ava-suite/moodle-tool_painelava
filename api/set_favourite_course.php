@@ -24,10 +24,19 @@ class set_favourite_course_service extends \tool_painelava\service
         $courseid  = \tool_painelava\aget($_GET, 'courseid', 0);
         $favourite = \tool_painelava\aget($_GET, 'favourite', 0);
 
-        $user = $DB->get_record('user', ['username' => strtolower($username)]);
+        $username = trim((string)$username);
+        $username = \core_text::strtolower($username);
+
+        // Validação de formato para reduzir abuso e entradas inesperadas.
+        // Aceita letras, números e caracteres comuns de usernames Moodle.
+        if ($username === '' || strlen($username) > 100 || !preg_match('/^[a-z0-9._@+-]+$/', $username)) {
+            return ['error' => ['message' => "Requisição inválida", 'code' => 400]];
+        }
+
+        $user = $DB->get_record('user', ['username' => $username]);
 
         if (!$user) {
-             return ['error' => ['message' => "Usuário não encontrado", 'code' => 404]];
+             return ['error' => ['message' => "Requisição inválida", 'code' => 400]];
         }
 
         \core\session\manager::set_user($user);

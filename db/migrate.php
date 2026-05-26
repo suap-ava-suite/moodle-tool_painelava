@@ -68,6 +68,15 @@ class migration_helpers {
 }
 
 
+/**
+ * Executes plugin migration steps for tool_painelava.
+ *
+ * Ensures required database structures exist (for example, the
+ * tool_painelava_logging table) and creates required course custom fields.
+ *
+ * @param int $oldversion Previously installed plugin version.
+ * @return bool True when migration steps complete successfully.
+ */
 function tool_painelava_migrate($oldversion)
 {
     global $DB;

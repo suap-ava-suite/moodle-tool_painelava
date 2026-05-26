@@ -44,6 +44,11 @@ function get_last_sort_order($tablename)
 function get_or_create($tablename, $keys, $values)
 {
     global $DB;
+
+    if (!\is_string($tablename) || !\preg_match('/^[a-z][a-z0-9_]*$/i', $tablename)) {
+        throw new \coding_exception('Invalid table name provided to get_or_create().');
+    }
+
     $record = $DB->get_record($tablename, $keys);
     if (!$record) {
         $record = (object)array_merge($keys, $values);

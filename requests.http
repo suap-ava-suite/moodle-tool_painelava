@@ -1,0 +1,3 @@
+GET http://moodle/admin/tool/painelava/api/?get_diarios&username=admin&situacao=inprogress
+Authentication: Token changeme
+

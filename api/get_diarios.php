@@ -2,7 +2,6 @@
 
 namespace tool_painelava;
 
-// Desabilita verificação CSRF para esta API
 if (!defined('NO_MOODLE_COOKIES')) {
     define('NO_MOODLE_COOKIES', true);
 }
@@ -110,20 +109,15 @@ class get_diarios_service extends \tool_painelava\service
      * Verifica se um curso do tipo 'diario' atende aos filtros de busca informados na API.
      */
     private function atende_filtros($curso, $filtros) {
-        // Se a API foi chamada sem nenhum filtro, o curso passa direto
         if (!$filtros['has_filters']) {
             return true;
         }
 
-        // Verifica a string de busca (q) usando stripos (que já é case-insensitive, dispensando o strtoupper)
         $match_q = empty($filtros['q']) || stripos($curso->shortname . ' ' . $curso->fullname, $filtros['q']) !== false;
-        
-        // Verifica os parâmetros exatos
         $match_semestre   = empty($filtros['semestre'])   || $curso->turma_ano_periodo == $filtros['semestre'];
         $match_disciplina = empty($filtros['disciplina']) || $curso->disciplina_id == $filtros['disciplina'];
         $match_curso      = empty($filtros['curso'])      || $curso->curso_codigo == $filtros['curso'];
 
-        // Só retorna verdadeiro se TODAS as condições ativas forem satisfeitas
         return $match_q && $match_semestre && $match_disciplina && $match_curso;
     }
 
@@ -139,11 +133,9 @@ class get_diarios_service extends \tool_painelava\service
             return [];
         }
 
-        // Prepara o IN() para os IDs dos cursos
         list($course_insql, $course_inparams) = $DB->get_in_or_equal($course_ids);
         $params = $course_inparams;
 
-        // Prepara o filtro de campos (se foi especificado)
         $field_filter = "";
         if (!empty($fields_to_fetch)) {
             list($field_insql, $field_inparams) = $DB->get_in_or_equal($fields_to_fetch);
@@ -151,7 +143,6 @@ class get_diarios_service extends \tool_painelava\service
             $params = array_merge($params, $field_inparams);
         }
 
-        // Faz uma única consulta robusta
         $sql = "SELECT d.id AS dataid, d.instanceid, f.shortname, d.value, d.charvalue
                 FROM {customfield_data} d
                 JOIN {customfield_field} f ON d.fieldid = f.id
@@ -163,7 +154,6 @@ class get_diarios_service extends \tool_painelava\service
         $results = [];
         if ($records) {
             foreach ($records as $rec) {
-                // Pega o valor limpo (priorizando textos grandes e caindo para curtos)
                 $val = $rec->value ?: $rec->charvalue;
                 $results[$rec->instanceid][$rec->shortname] = is_string($val) ? trim($val) : $val;
             }
@@ -182,16 +172,14 @@ class get_diarios_service extends \tool_painelava\service
         global $DB, $CFG;
         $autoinscricoes = [];
 
-        // AGORA BUSCAMOS PELO CAMPO DE RESTRIÇÕES, E NÃO MAIS PELO SALA_TIPO
         $campo_restricao = $DB->get_record('customfield_field', ['shortname' => 'restricoes_de_autoinscricao']);
         if (!$campo_restricao) return $autoinscricoes;
 
-        // Cursos visíveis que possuam ALGUMA COISA escrita no campo de restrições
+        // Ocultado a checagem de empty do banco para evitar bugs com LONGTEXT
         $sql_vitrine = "SELECT c.id, c.fullname, c.shortname
                         FROM {course} c
                         JOIN {customfield_data} d ON d.instanceid = c.id
-                        WHERE d.fieldid = ? AND c.visible = 1 
-                          AND (d.charvalue != '' OR d.value IS NOT NULL AND d.value != '')";
+                        WHERE d.fieldid = ? AND c.visible = 1";
                         
         $cursos_vitrine = $DB->get_records_sql($sql_vitrine, [$campo_restricao->id]);
         if (empty($cursos_vitrine)) return $autoinscricoes;
@@ -206,15 +194,11 @@ class get_diarios_service extends \tool_painelava\service
             $mapa_matriculados[$diario_aluno->id] = true;
         }
 
-        // Monta os cursos da vitrine
         foreach ($cursos_vitrine as $curso_vitrine) {
-
-            // Lê as restrições e limpa as tags HTML que o editor do Moodle costuma colocar (ex: <p>, <br>)
             $restricoes_str = $cf_vitrine[$curso_vitrine->id]['restricoes_de_autoinscricao'] ?? '';
             $texto_limpo_restricoes = trim(html_entity_decode(strip_tags($restricoes_str), ENT_QUOTES, 'UTF-8'));
 
             $curso_vitrine->restricoes_de_autoinscricao = $texto_limpo_restricoes;
-
             $this->inject_custom_fields($curso_vitrine, $cf_vitrine[$curso_vitrine->id] ?? []);
 
             $curso_vitrine->is_enrolled = isset($mapa_matriculados[$curso_vitrine->id]);
@@ -231,6 +215,10 @@ class get_diarios_service extends \tool_painelava\service
     {
         global $DB, $CFG, $USER;
 
+        require_once($CFG->dirroot . '/course/externallib.php');
+
+        $start_total = microtime(true); // Cronômetro global da API
+
         $usuario_moodle = $DB->get_record('user', ['username' => strtolower($username)]);
         $userid = $usuario_moodle ? $usuario_moodle->id : null;
 
@@ -238,24 +226,39 @@ class get_diarios_service extends \tool_painelava\service
         $agrupamentos = [];
         $enrolled_courses = [];
         $all_diarios_by_id = [];
-        $can_set_visibility_ids = [];
-        $is_admin = false;
         $cfs_missing = [];
 
         if ($usuario_moodle) {
             $USER = $usuario_moodle;
-
+            
+            // --- LOG 1: Todos os Diários (Inscrições do usuário) ---
+            $t0 = microtime(true);
             $all_diarios = $this->get_all_diarios($USER->username);
+            error_log('[PROFILER - 1] get_all_diarios: ' . round((microtime(true) - $t0) * 1000, 2) . 'ms');
             
-            // =========================================================================
-            // INÍCIO DA OTIMIZAÇÃO
-            // =========================================================================
-            $start = microtime(true);
-            
-            // 1. Busca os cursos do aluno
+            // --- LOG 2.1: Chamada rápida da Timeline ---
+            $t1 = microtime(true);
             $my_courses = enrol_get_my_courses('id, fullname, shortname, visible, startdate, enddate, enablecompletion', $ordenacao);
-            
-            // 2. Busca favoritos e ocultos em lote
+            error_log('[PROFILER - 2.1] enrol_get_my_courses (Nativa): ' . round((microtime(true) - $t1) * 1000, 2) . 'ms');
+
+            // --- LOG 2.2: O teste real (Pré-carregamento movido para o topo) ---
+            $t_preload = microtime(true);
+            $my_course_ids = array_column($my_courses, 'id');
+            if (!empty($my_course_ids)) {
+                list($ctx_sql, $ctx_params) = $DB->get_in_or_equal($my_course_ids);
+                $ctx_fields = \context_helper::get_preload_record_columns_sql('ctx');
+                $sql_contexts = "SELECT $ctx_fields FROM {context} ctx WHERE ctx.contextlevel = 50 AND ctx.instanceid $ctx_sql";
+                if ($recordset = $DB->get_recordset_sql($sql_contexts, $ctx_params)) {
+                    foreach ($recordset as $ctxrecord) {
+                        \context_helper::preload_from_record($ctxrecord);
+                    }
+                    $recordset->close();
+                }
+            }
+            error_log('[PROFILER - 2.2] context_preload (RAM): ' . round((microtime(true) - $t_preload) * 1000, 2) . 'ms');
+
+            // --- LOG 2.3: Preferências de Ocultos e Favoritos ---
+            $t_prefs = microtime(true);
             $fav_records = $DB->get_records('favourite', ['component' => 'core_course', 'itemtype' => 'courses', 'userid' => $USER->id], '', 'itemid, id');
             
             $hidden_prefs = $DB->get_records_select('user_preferences', "userid = ? AND name LIKE 'block_myoverview_hidden_course_%'", [$USER->id], '', 'name, value');
@@ -266,9 +269,16 @@ class get_diarios_service extends \tool_painelava\service
                     $hidden_ids[$id] = true;
                 }
             }
+            error_log('[PROFILER - 2.3] fav_and_hidden_prefs: ' . round((microtime(true) - $t_prefs) * 1000, 2) . 'ms');
 
-            // 3. Monta o array da Timeline
+            // --- LOG 2.4: Loop de Montagem e Cálculo de Progresso ---
+            $t_loop = microtime(true);
             $time = time();
+
+            // Apagar teste
+            $completioncourses = 0;
+            $tprogress = 0;
+
             foreach ($my_courses as $c) {
                 $ishidden = isset($hidden_ids[$c->id]);
                 $isfav = isset($fav_records[$c->id]);
@@ -284,7 +294,6 @@ class get_diarios_service extends \tool_painelava\service
                     $class = 'inprogress';
                 }
 
-                // Aplica o filtro da Timeline ($situacao)
                 if ($situacao !== 'all' && $situacao !== 'allincludinghidden') {
                     if ($situacao === 'favourites' && !$isfav) continue;
                     if ($situacao !== 'favourites' && $class !== $situacao) continue;
@@ -294,15 +303,26 @@ class get_diarios_service extends \tool_painelava\service
                 $progress = null;
                 $hasprogress = false;
 
-                if ($c->enablecompletion == 1) {
-                    // Carrega a biblioteca de conclusão nativa por segurança
-                    require_once($CFG->libdir . '/completionlib.php');
+                // 1ª Trava: É do semestre atual e o curso aceita barra de progresso?
+                if ($class === 'inprogress' && $c->enablecompletion == 1) {
+                                    
+                    $coursecontext = \context_course::instance($c->id);
                     
-                    $raw_progress = \core_completion\progress::get_course_progress_percentage($c, $USER->id);
-                    
-                    if ($raw_progress !== null) {
-                        $hasprogress = true;
-                        $progress = round($raw_progress);
+                    // 2ª Trava: O usuário realmente é rastreado (Aluno)?
+                    if (has_capability('moodle/course:isincompletionreports', $coursecontext, $USER)) {
+                        
+                        $p0 = microtime(true);
+                        $completioncourses++;
+                        
+                        require_once($CFG->libdir . '/completionlib.php');
+                        $raw_progress = \core_completion\progress::get_course_progress_percentage($c, $USER->id);
+                        
+                        if ($raw_progress !== null) {
+                            $hasprogress = true;
+                            $progress = round($raw_progress);
+                        }
+                        
+                        $tprogress += microtime(true) - $p0;
                     }
                 }
 
@@ -317,12 +337,16 @@ class get_diarios_service extends \tool_painelava\service
                     'visible' => $c->visible
                 ];
             }
-            
-            error_log('Timeline nativa otimizada: ' . round((microtime(true) - $start) * 1000, 2) . 'ms');
-            // =========================================================================
-            // FIM DA OTIMIZAÇÃO
-            // =========================================================================
+            error_log("Cursos com completion: $completioncourses");
+            error_log(
+                'tempo_progress_total: ' .
+                round($tprogress * 1000, 2) .
+                'ms'
+            );
+            error_log('[PROFILER - 2.4] loop_timeline_and_completion: ' . round((microtime(true) - $t_loop) * 1000, 2) . 'ms');
 
+            // --- LOG 3: Indexação e Custom Fields Faltantes ---
+            $t3 = microtime(true);
             foreach ($all_diarios as $diario) {
                 $all_diarios_by_id[$diario->id] = $diario;
             }
@@ -338,21 +362,7 @@ class get_diarios_service extends \tool_painelava\service
                 $campos_relevantes = ['turma_ano_periodo', 'disciplina_id', 'disciplina_descricao', 'disciplina_sigla', 'curso_codigo', 'curso_descricao', 'diario_id', 'sala_tipo'];
                 $cfs_missing = $this->get_custom_fields_for_courses($missing_ids, $campos_relevantes);
             }
-
-            // Pré-carrega todos os contextos dos cursos na memória RAM de uma só vez
-            $enrolled_ids = array_column($enrolled_courses, 'id');
-            if (!empty($enrolled_ids)) {
-                list($ctx_sql, $ctx_params) = $DB->get_in_or_equal($enrolled_ids);
-                $ctx_fields = \context_helper::get_preload_record_columns_sql('ctx');
-                $sql_contexts = "SELECT $ctx_fields FROM {context} ctx WHERE ctx.contextlevel = 50 AND ctx.instanceid $ctx_sql";
-                if ($recordset = $DB->get_recordset_sql($sql_contexts, $ctx_params)) {
-                    foreach ($recordset as $ctxrecord) {
-                        \context_helper::preload_from_record($ctxrecord);
-                    }
-                    $recordset->close();
-                }
-            }
-
+            error_log('[PROFILER - 3] custom_fields_missing: ' . round((microtime(true) - $t3) * 1000, 2) . 'ms');
         }
 
         $filtros_busca = [
@@ -363,6 +373,8 @@ class get_diarios_service extends \tool_painelava\service
             'has_filters' => !empty($semestre . $disciplina . $curso . $q)
         ];
 
+        // --- LOG 4: Filtros de busca e Checagem real de Capabilities (has_capability) ---
+        $t4 = microtime(true);
         foreach ($enrolled_courses as $diario) {
             $coursecontext = \context_course::instance($diario->id);
 
@@ -413,8 +425,12 @@ class get_diarios_service extends \tool_painelava\service
                 $agrupamentos[$target_aba][] = $curso_limpo;
             }
         }
+        error_log('[PROFILER - 4] loop_agrupamentos_e_capabilities: ' . round((microtime(true) - $t4) * 1000, 2) . 'ms');
 
+        // --- LOG 5: Vitrine SQL de Autoinscrições ---
+        $t5 = microtime(true);
         $vitrine = $this->get_autoinscricoes($userid, $all_diarios);
+        error_log('[PROFILER - 5] get_autoinscricoes: ' . round((microtime(true) - $t5) * 1000, 2) . 'ms');
 
         if ($vitrine && !isset($agrupamentos['autoinscricoes'])) {
             $agrupamentos['autoinscricoes'] = [];
@@ -433,6 +449,8 @@ class get_diarios_service extends \tool_painelava\service
         if (!isset($agrupamentos['diarios'])) {
             $agrupamentos['diarios'] = [];
         }
+
+        error_log('[PROFILER - TOTAL] Tempo total da API: ' . round((microtime(true) - $start_total) * 1000, 2) . 'ms');
 
         return array_merge($return_base, $agrupamentos);
     }

@@ -213,11 +213,7 @@ class get_diarios_service extends \tool_painelava\service
 
     function get_diarios($username, $semestre, $situacao, $ordenacao, $disciplina, $curso, $arquetipo, $q, $page, $page_size)
     {
-        global $DB, $CFG, $USER;
-
-        require_once($CFG->dirroot . '/course/externallib.php');
-
-        $start_total = microtime(true); // Cronômetro global da API
+        global $DB, $USER;
 
         $usuario_moodle = $DB->get_record('user', ['username' => strtolower($username)]);
         $userid = $usuario_moodle ? $usuario_moodle->id : null;
@@ -225,144 +221,13 @@ class get_diarios_service extends \tool_painelava\service
         $all_diarios = [];
         $agrupamentos = [];
         $enrolled_courses = [];
-        $all_diarios_by_id = [];
-        $cfs_missing = [];
 
         if ($usuario_moodle) {
             $USER = $usuario_moodle;
+
+            $all_diarios = $this->get_all_diarios($usuario_moodle->username);
             
-            // --- LOG 1: Todos os Diários (Inscrições do usuário) ---
-            $t0 = microtime(true);
-            $all_diarios = $this->get_all_diarios($USER->username);
-            error_log('[PROFILER - 1] get_all_diarios: ' . round((microtime(true) - $t0) * 1000, 2) . 'ms');
-            
-            // --- LOG 2.1: Chamada rápida da Timeline ---
-            $t1 = microtime(true);
-            $my_courses = enrol_get_my_courses('id, fullname, shortname, visible, startdate, enddate, enablecompletion', $ordenacao);
-            error_log('[PROFILER - 2.1] enrol_get_my_courses (Nativa): ' . round((microtime(true) - $t1) * 1000, 2) . 'ms');
-
-            // --- LOG 2.2: O teste real (Pré-carregamento movido para o topo) ---
-            $t_preload = microtime(true);
-            $my_course_ids = array_column($my_courses, 'id');
-            if (!empty($my_course_ids)) {
-                list($ctx_sql, $ctx_params) = $DB->get_in_or_equal($my_course_ids);
-                $ctx_fields = \context_helper::get_preload_record_columns_sql('ctx');
-                $sql_contexts = "SELECT $ctx_fields FROM {context} ctx WHERE ctx.contextlevel = 50 AND ctx.instanceid $ctx_sql";
-                if ($recordset = $DB->get_recordset_sql($sql_contexts, $ctx_params)) {
-                    foreach ($recordset as $ctxrecord) {
-                        \context_helper::preload_from_record($ctxrecord);
-                    }
-                    $recordset->close();
-                }
-            }
-            error_log('[PROFILER - 2.2] context_preload (RAM): ' . round((microtime(true) - $t_preload) * 1000, 2) . 'ms');
-
-            // --- LOG 2.3: Preferências de Ocultos e Favoritos ---
-            $t_prefs = microtime(true);
-            $fav_records = $DB->get_records('favourite', ['component' => 'core_course', 'itemtype' => 'courses', 'userid' => $USER->id], '', 'itemid, id');
-            
-            $hidden_prefs = $DB->get_records_select('user_preferences', "userid = ? AND name LIKE 'block_myoverview_hidden_course_%'", [$USER->id], '', 'name, value');
-            $hidden_ids = [];
-            if ($hidden_prefs) {
-                foreach ($hidden_prefs as $pref) {
-                    $id = str_replace('block_myoverview_hidden_course_', '', $pref->name);
-                    $hidden_ids[$id] = true;
-                }
-            }
-            error_log('[PROFILER - 2.3] fav_and_hidden_prefs: ' . round((microtime(true) - $t_prefs) * 1000, 2) . 'ms');
-
-            // --- LOG 2.4: Loop de Montagem e Cálculo de Progresso ---
-            $t_loop = microtime(true);
-            $time = time();
-
-            // Apagar teste
-            $completioncourses = 0;
-            $tprogress = 0;
-
-            foreach ($my_courses as $c) {
-                $ishidden = isset($hidden_ids[$c->id]);
-                $isfav = isset($fav_records[$c->id]);
-                
-                $class = 'all';
-                if ($ishidden) {
-                    $class = 'hidden';
-                } else if ($c->enddate > 0 && $c->enddate < $time) {
-                    $class = 'past';
-                } else if ($c->startdate > $time) {
-                    $class = 'future';
-                } else {
-                    $class = 'inprogress';
-                }
-
-                if ($situacao !== 'all' && $situacao !== 'allincludinghidden') {
-                    if ($situacao === 'favourites' && !$isfav) continue;
-                    if ($situacao !== 'favourites' && $class !== $situacao) continue;
-                }
-                if ($situacao === 'all' && $ishidden) continue;
-
-                $progress = null;
-                $hasprogress = false;
-
-                // 1ª Trava: É do semestre atual e o curso aceita barra de progresso?
-                if ($class === 'inprogress' && $c->enablecompletion == 1) {
-                                    
-                    $coursecontext = \context_course::instance($c->id);
-                    
-                    // 2ª Trava: O usuário realmente é rastreado (Aluno)?
-                    if (has_capability('moodle/course:isincompletionreports', $coursecontext, $USER)) {
-                        
-                        $p0 = microtime(true);
-                        $completioncourses++;
-                        
-                        require_once($CFG->libdir . '/completionlib.php');
-                        $raw_progress = \core_completion\progress::get_course_progress_percentage($c, $USER->id);
-                        
-                        if ($raw_progress !== null) {
-                            $hasprogress = true;
-                            $progress = round($raw_progress);
-                        }
-                        
-                        $tprogress += microtime(true) - $p0;
-                    }
-                }
-
-                $enrolled_courses[] = (object)[
-                    'id' => $c->id,
-                    'fullname' => $c->fullname,
-                    'shortname' => $c->shortname,
-                    'viewurl' => $CFG->wwwroot . '/course/view.php?id=' . $c->id,
-                    'progress' => $progress,
-                    'hasprogress' => $hasprogress,
-                    'isfavourite' => $isfav,
-                    'visible' => $c->visible
-                ];
-            }
-            error_log("Cursos com completion: $completioncourses");
-            error_log(
-                'tempo_progress_total: ' .
-                round($tprogress * 1000, 2) .
-                'ms'
-            );
-            error_log('[PROFILER - 2.4] loop_timeline_and_completion: ' . round((microtime(true) - $t_loop) * 1000, 2) . 'ms');
-
-            // --- LOG 3: Indexação e Custom Fields Faltantes ---
-            $t3 = microtime(true);
-            foreach ($all_diarios as $diario) {
-                $all_diarios_by_id[$diario->id] = $diario;
-            }
-
-            $missing_ids = [];
-            foreach ($enrolled_courses as $diario) {
-                if (!isset($all_diarios_by_id[$diario->id])) {
-                    $missing_ids[] = $diario->id;
-                }
-            }
-
-            if (!empty($missing_ids)) {
-                $campos_relevantes = ['turma_ano_periodo', 'disciplina_id', 'disciplina_descricao', 'disciplina_sigla', 'curso_codigo', 'curso_descricao', 'diario_id', 'sala_tipo'];
-                $cfs_missing = $this->get_custom_fields_for_courses($missing_ids, $campos_relevantes);
-            }
-            error_log('[PROFILER - 3] custom_fields_missing: ' . round((microtime(true) - $t3) * 1000, 2) . 'ms');
+            $enrolled_courses = $this->build_timeline_with_progress($usuario_moodle, $ordenacao, $situacao, $all_diarios);
         }
 
         $filtros_busca = [
@@ -372,23 +237,203 @@ class get_diarios_service extends \tool_painelava\service
             'q'           => $q,
             'has_filters' => !empty($semestre . $disciplina . $curso . $q)
         ];
+        $agrupamentos = $this->process_and_group_courses($usuario_moodle, $enrolled_courses, $all_diarios, $filtros_busca);
 
-        // --- LOG 4: Filtros de busca e Checagem real de Capabilities (has_capability) ---
-        $t4 = microtime(true);
+        $vitrine = $this->get_autoinscricoes($userid, $all_diarios);
+        if ($vitrine) {
+            if (!isset($agrupamentos['autoinscricoes'])) {
+                $agrupamentos['autoinscricoes'] = [];
+            }
+            foreach ($vitrine as $curso_vitrine) {
+                $agrupamentos['autoinscricoes'][] = $curso_vitrine;
+            }
+        }
+
+        $return_base = [
+            "semestres"   => $this->get_semestres($all_diarios),
+            "disciplinas" => $this->get_disciplinas($all_diarios),
+            "cursos"      => $this->get_cursos($all_diarios),
+        ]; 
+
+        if (!isset($agrupamentos['diarios'])) {
+            $agrupamentos['diarios'] = [];
+        }
+
+        return array_merge($return_base, $agrupamentos);
+    }
+
+    /**
+     * Extrai e monta a timeline de cursos calculando o progresso apenas se o usuário for aluno.
+     */
+    private function build_timeline_with_progress($usuario, $ordenacao, $situacao, $all_diarios)
+    {
+        global $DB, $CFG;
+        $enrolled_courses = [];
+
+        $my_courses = enrol_get_my_courses('id, fullname, shortname, visible, startdate, enddate, enablecompletion', $ordenacao);
+
+        // Pré-carrega contextos na RAM para evitar N+1
+        $my_course_ids = array_column($my_courses, 'id');
+        $this->preload_course_contexts($my_course_ids);
+
+        // Indexa os diários já carregados por ID para busca instantânea
+        $all_diarios_by_id = [];
+        foreach ($all_diarios as $d) {
+            $all_diarios_by_id[$d->id] = $d;
+        }
+
+        // Segurança: Se houver algum curso na timeline que não estava no get_all_diarios,
+        // busca o sala_tipo dele em lote para não quebrar a lógica
+        $missing_ids = [];
+        foreach ($my_courses as $c) {
+            if (!isset($all_diarios_by_id[$c->id])) {
+                $missing_ids[] = $c->id;
+            }
+        }
+        $cfs_missing_sala = [];
+        if (!empty($missing_ids)) {
+            $cfs_missing_sala = $this->get_custom_fields_for_courses($missing_ids, ['sala_tipo']);
+        }
+
+        $fav_records = $DB->get_records('favourite', ['component' => 'core_course', 'itemtype' => 'courses', 'userid' => $usuario->id], '', 'itemid, id');
+        $hidden_prefs = $DB->get_records_select('user_preferences', "userid = ? AND name LIKE 'block_myoverview_hidden_course_%'", [$usuario->id], '', 'name, value');
+        $hidden_ids = [];
+        if ($hidden_prefs) {
+            foreach ($hidden_prefs as $pref) {
+                $id = str_replace('block_myoverview_hidden_course_', '', $pref->name);
+                $hidden_ids[$id] = true;
+            }
+        }
+
+        $time = time();
+        foreach ($my_courses as $c) {
+            $ishidden = isset($hidden_ids[$c->id]);
+            $isfav = isset($fav_records[$c->id]);
+            
+            $class = 'all';
+            if ($ishidden) {
+                $class = 'hidden';
+            } else if ($c->enddate > 0 && $c->enddate < $time) {
+                $class = 'past';
+            } else if ($c->startdate > $time) {
+                $class = 'future';
+            } else {
+                $class = 'inprogress';
+            }
+
+            if ($situacao !== 'all' && $situacao !== 'allincludinghidden') {
+                if ($situacao === 'favourites' && !$isfav) continue;
+                if ($situacao !== 'favourites' && $class !== $situacao) continue;
+            }
+            if ($situacao === 'all' && $ishidden) continue;
+
+            $progress = null;
+            $hasprogress = false;
+
+            // Identifica a aba de destino do curso seguindo a mesma regra do agrupamento principal
+            $sala_tipo_original = 'diarios';
+            if (isset($all_diarios_by_id[$c->id])) {
+                $sala_tipo_original = !empty($all_diarios_by_id[$c->id]->sala_tipo) ? strtolower(trim($all_diarios_by_id[$c->id]->sala_tipo)) : 'diarios';
+            } else if (isset($cfs_missing_sala[$c->id]['sala_tipo'])) {
+                $sala_tipo_original = !empty($cfs_missing_sala[$c->id]['sala_tipo']) ? strtolower(trim($cfs_missing_sala[$c->id]['sala_tipo'])) : 'diarios';
+            }
+            $target_aba = ($sala_tipo_original === 'autoinscricoes') ? 'diarios' : $sala_tipo_original;
+            $is_diario = ($target_aba === 'diarios');
+
+            if ($class === 'inprogress' && $c->enablecompletion == 1 && $is_diario) {
+                $coursecontext = \context_course::instance($c->id);
+                if (has_capability('moodle/course:isincompletionreports', $coursecontext, $usuario)) {
+                    require_once($CFG->libdir . '/completionlib.php');
+                    $raw_progress = \core_completion\progress::get_course_progress_percentage($c, $usuario->id);
+                    if ($raw_progress !== null) {
+                        $hasprogress = true;
+                        $progress = round($raw_progress);
+                    }
+                }
+            }
+
+            $enrolled_courses[] = (object)[
+                'id'          => $c->id,
+                'fullname'    => $c->fullname,
+                'shortname'   => $c->shortname,
+                'viewurl'     => $CFG->wwwroot . '/course/view.php?id=' . $c->id,
+                'progress'    => $progress,
+                'hasprogress' => $hasprogress,
+                'isfavourite' => $isfav,
+                'visible'     => $c->visible
+            ];
+        }
+
+        return $enrolled_courses;
+    }
+
+    /**
+     * Abastece a memória RAM com os contextos dos cursos informados de uma só vez (Evita N+1).
+     */
+    private function preload_course_contexts(array $course_ids)
+    {
+        global $DB;
+        if (empty($course_ids)) {
+            return;
+        }
+
+        list($ctx_sql, $ctx_params) = $DB->get_in_or_equal($course_ids);
+        $ctx_fields = \context_helper::get_preload_record_columns_sql('ctx');
+        $sql_contexts = "SELECT $ctx_fields FROM {context} ctx WHERE ctx.contextlevel = 50 AND ctx.instanceid $ctx_sql";
+        
+        if ($recordset = $DB->get_recordset_sql($sql_contexts, $ctx_params)) {
+            foreach ($recordset as $ctxrecord) {
+                \context_helper::preload_from_record($ctxrecord);
+            }
+            $recordset->close();
+        }
+    }
+
+    /**
+     * Varre as matrículas da timeline, indexa metadados ausentes e faz a distribuição nas abas correspondentes.
+     */
+    private function process_and_group_courses($usuario, array $enrolled_courses, array $all_diarios, array $filtros_busca)
+    {
+        $agrupamentos = [];
+        if (empty($enrolled_courses)) {
+            return $agrupamentos;
+        }
+
+        // Indexa os diários por ID para busca rápida em memória
+        $all_diarios_by_id = [];
+        foreach ($all_diarios as $diario) {
+            $all_diarios_by_id[$diario->id] = $diario;
+        }
+
+        // Verifica se algum curso vindo da timeline precisa ter seus custom fields carregados
+        $missing_ids = [];
+        foreach ($enrolled_courses as $diario) {
+            if (!isset($all_diarios_by_id[$diario->id])) {
+                $missing_ids[] = $diario->id;
+            }
+        }
+
+        $cfs_missing = [];
+        if (!empty($missing_ids)) {
+            $campos_relevantes = ['turma_ano_periodo', 'disciplina_id', 'disciplina_descricao', 'disciplina_sigla', 'curso_codigo', 'curso_descricao', 'diario_id', 'sala_tipo'];
+            $cfs_missing = $this->get_custom_fields_for_courses($missing_ids, $campos_relevantes);
+        }
+
+        // Distribuição estruturada nas abas (diarios, coordenacoes, projetos...)
         foreach ($enrolled_courses as $diario) {
             $coursecontext = \context_course::instance($diario->id);
 
             $curso_limpo = (object) [
-                'id' => $diario->id,
-                'fullname' => $diario->fullname,
-                'shortname' => $diario->shortname,
-                'viewurl' => $diario->viewurl,
-                'progress' => $diario->progress ?? null,
-                'hasprogress' => $diario->hasprogress ?? false,
-                'isfavourite' => $diario->isfavourite ?? false,
-                'visible' => $diario->visible ?? false,
-                'is_enrolled' => true,
-                'can_set_visibility' => has_capability('moodle/course:visibility', $coursecontext, $USER) ? 1 : 0,
+                'id'                 => $diario->id,
+                'fullname'           => $diario->fullname,
+                'shortname'          => $diario->shortname,
+                'viewurl'            => $diario->viewurl,
+                'progress'           => $diario->progress,
+                'hasprogress'        => $diario->hasprogress,
+                'isfavourite'        => $diario->isfavourite,
+                'visible'            => $diario->visible,
+                'is_enrolled'        => true,
+                'can_set_visibility' => has_capability('moodle/course:visibility', $coursecontext, $usuario) ? 1 : 0,
             ];
 
             $cf_dados = [];
@@ -425,34 +470,8 @@ class get_diarios_service extends \tool_painelava\service
                 $agrupamentos[$target_aba][] = $curso_limpo;
             }
         }
-        error_log('[PROFILER - 4] loop_agrupamentos_e_capabilities: ' . round((microtime(true) - $t4) * 1000, 2) . 'ms');
 
-        // --- LOG 5: Vitrine SQL de Autoinscrições ---
-        $t5 = microtime(true);
-        $vitrine = $this->get_autoinscricoes($userid, $all_diarios);
-        error_log('[PROFILER - 5] get_autoinscricoes: ' . round((microtime(true) - $t5) * 1000, 2) . 'ms');
-
-        if ($vitrine && !isset($agrupamentos['autoinscricoes'])) {
-            $agrupamentos['autoinscricoes'] = [];
-        }
-
-        foreach ($vitrine as $curso_vitrine) {
-            $agrupamentos['autoinscricoes'][] = $curso_vitrine;
-        }
-
-        $return_base = [
-            "semestres" => $this->get_semestres($all_diarios),
-            "disciplinas" => $this->get_disciplinas($all_diarios),
-            "cursos" => $this->get_cursos($all_diarios),
-        ]; 
-
-        if (!isset($agrupamentos['diarios'])) {
-            $agrupamentos['diarios'] = [];
-        }
-
-        error_log('[PROFILER - TOTAL] Tempo total da API: ' . round((microtime(true) - $start_total) * 1000, 2) . 'ms');
-
-        return array_merge($return_base, $agrupamentos);
+        return $agrupamentos;
     }
 
     function do_call()

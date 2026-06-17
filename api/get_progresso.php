@@ -59,8 +59,11 @@ class get_progresso_service extends \tool_painelava\service
                 $hasprogress = false;
 
                 if ($c->enablecompletion == COMPLETION_ENABLED) {
-                    $progress = \core_completion\progress::get_course_progress_percentage($c, $userid);
-                    $hasprogress = !is_null($progress);
+                    $raw_progress = \core_completion\progress::get_course_progress_percentage($c, $userid);
+                    $hasprogress = !is_null($raw_progress);
+                    if ($hasprogress) {
+                        $progress = (int) round($raw_progress);
+                    }
                 }
 
                 $result[$c->id] = [

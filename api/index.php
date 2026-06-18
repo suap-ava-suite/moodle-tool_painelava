@@ -42,9 +42,8 @@ try {
     set_exception_handler('\tool_painelava\exception_handler');
     
     $whitelist = [
-        'get_salas',
-        'get_progresso',
         'get_diarios',
+        'get_progresso',
         'get_atualizacoes_counts',
         'get_course_info',
 

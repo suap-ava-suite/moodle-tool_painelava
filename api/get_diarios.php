@@ -175,11 +175,11 @@ class get_diarios_service extends \tool_painelava\service
         $campo_restricao = $DB->get_record('customfield_field', ['shortname' => 'restricoes_de_autoinscricao']);
         if (!$campo_restricao) return $autoinscricoes;
 
-        // Ocultado a checagem de empty do banco para evitar bugs com LONGTEXT
         $sql_vitrine = "SELECT c.id, c.fullname, c.shortname
                         FROM {course} c
                         JOIN {customfield_data} d ON d.instanceid = c.id
-                        WHERE d.fieldid = ? AND c.visible = 1";
+                        WHERE d.fieldid = ? AND c.visible = 1
+                          AND (d.charvalue != '' OR d.value IS NOT NULL AND d.value != '')";
                         
         $cursos_vitrine = $DB->get_records_sql($sql_vitrine, [$campo_restricao->id]);
         if (empty($cursos_vitrine)) return $autoinscricoes;
@@ -195,10 +195,14 @@ class get_diarios_service extends \tool_painelava\service
         }
 
         foreach ($cursos_vitrine as $curso_vitrine) {
-            $restricoes_str = $cf_vitrine[$curso_vitrine->id]['restricoes_de_autoinscricao'] ?? '';
-            $texto_limpo_restricoes = trim(html_entity_decode(strip_tags($restricoes_str), ENT_QUOTES, 'UTF-8'));
+            
+            $restricoes_str = trim($cf_vitrine[$curso_vitrine->id]['restricoes_de_autoinscricao'] ?? '');
 
-            $curso_vitrine->restricoes_de_autoinscricao = $texto_limpo_restricoes;
+            if (empty($restricoes_str)) {
+                continue;
+            }
+
+            $curso_vitrine->restricoes_de_autoinscricao = $restricoes_str;
             $this->inject_custom_fields($curso_vitrine, $cf_vitrine[$curso_vitrine->id] ?? []);
 
             $curso_vitrine->is_enrolled = isset($mapa_matriculados[$curso_vitrine->id]);
@@ -270,7 +274,7 @@ class get_diarios_service extends \tool_painelava\service
         global $DB, $CFG;
         $enrolled_courses = [];
 
-        $my_courses = enrol_get_my_courses('id, fullname, shortname, visible, startdate, enddate, enablecompletion', $ordenacao);
+        $my_courses = enrol_get_my_courses('id, fullname, shortname, visible, startdate, enddate, enablecompletion, cacherev', $ordenacao);
 
         // Pré-carrega contextos na RAM para evitar N+1
         $my_course_ids = array_column($my_courses, 'id');
@@ -280,19 +284,6 @@ class get_diarios_service extends \tool_painelava\service
         $all_diarios_by_id = [];
         foreach ($all_diarios as $d) {
             $all_diarios_by_id[$d->id] = $d;
-        }
-
-        // Segurança: Se houver algum curso na timeline que não estava no get_all_diarios,
-        // busca o sala_tipo dele em lote para não quebrar a lógica
-        $missing_ids = [];
-        foreach ($my_courses as $c) {
-            if (!isset($all_diarios_by_id[$c->id])) {
-                $missing_ids[] = $c->id;
-            }
-        }
-        $cfs_missing_sala = [];
-        if (!empty($missing_ids)) {
-            $cfs_missing_sala = $this->get_custom_fields_for_courses($missing_ids, ['sala_tipo']);
         }
 
         $fav_records = $DB->get_records('favourite', ['component' => 'core_course', 'itemtype' => 'courses', 'userid' => $usuario->id], '', 'itemid, id');
@@ -327,40 +318,17 @@ class get_diarios_service extends \tool_painelava\service
             }
             if ($situacao === 'all' && $ishidden) continue;
 
-            $progress = null;
-            $hasprogress = false;
-
-            // Identifica a aba de destino do curso seguindo a mesma regra do agrupamento principal
-            $sala_tipo_original = 'diarios';
-            if (isset($all_diarios_by_id[$c->id])) {
-                $sala_tipo_original = !empty($all_diarios_by_id[$c->id]->sala_tipo) ? strtolower(trim($all_diarios_by_id[$c->id]->sala_tipo)) : 'diarios';
-            } else if (isset($cfs_missing_sala[$c->id]['sala_tipo'])) {
-                $sala_tipo_original = !empty($cfs_missing_sala[$c->id]['sala_tipo']) ? strtolower(trim($cfs_missing_sala[$c->id]['sala_tipo'])) : 'diarios';
-            }
-            $target_aba = ($sala_tipo_original === 'autoinscricoes') ? 'diarios' : $sala_tipo_original;
-            $is_diario = ($target_aba === 'diarios');
-
-            if ($class === 'inprogress' && $c->enablecompletion == 1 && $is_diario) {
-                $coursecontext = \context_course::instance($c->id);
-                if (has_capability('moodle/course:isincompletionreports', $coursecontext, $usuario)) {
-                    require_once($CFG->libdir . '/completionlib.php');
-                    $raw_progress = \core_completion\progress::get_course_progress_percentage($c, $usuario->id);
-                    if ($raw_progress !== null) {
-                        $hasprogress = true;
-                        $progress = round($raw_progress);
-                    }
-                }
-            }
-
             $enrolled_courses[] = (object)[
                 'id'          => $c->id,
                 'fullname'    => $c->fullname,
                 'shortname'   => $c->shortname,
                 'viewurl'     => $CFG->wwwroot . '/course/view.php?id=' . $c->id,
-                'progress'    => $progress,
-                'hasprogress' => $hasprogress,
+                'progress'    => null,
+                'hasprogress' => false,
                 'isfavourite' => $isfav,
-                'visible'     => $c->visible
+                'visible'     => $c->visible,
+                '_course'     => $c,
+                '_class'      => $class,
             ];
         }
 
@@ -394,6 +362,7 @@ class get_diarios_service extends \tool_painelava\service
      */
     private function process_and_group_courses($usuario, array $enrolled_courses, array $all_diarios, array $filtros_busca)
     {
+        global $CFG;
         $agrupamentos = [];
         if (empty($enrolled_courses)) {
             return $agrupamentos;
@@ -428,8 +397,8 @@ class get_diarios_service extends \tool_painelava\service
                 'fullname'           => $diario->fullname,
                 'shortname'          => $diario->shortname,
                 'viewurl'            => $diario->viewurl,
-                'progress'           => $diario->progress,
-                'hasprogress'        => $diario->hasprogress,
+                'progress'           => null,
+                'hasprogress'        => false,
                 'isfavourite'        => $diario->isfavourite,
                 'visible'            => $diario->visible,
                 'is_enrolled'        => true,

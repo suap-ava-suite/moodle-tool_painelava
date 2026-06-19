@@ -43,6 +43,7 @@ try {
     
     $whitelist = [
         'get_diarios',
+        'get_progresso',
         'get_atualizacoes_counts',
         'get_course_info',
 

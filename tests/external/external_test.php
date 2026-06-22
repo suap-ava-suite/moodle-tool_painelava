@@ -94,9 +94,12 @@ final class external_test extends externallib_advanced_testcase {
         $admin = get_admin();
         $this->setUser($admin);
 
-        $this->expectException(\moodle_exception::class);
-        $this->expectExceptionMessage('invaliduser');
-        get_user_courses::execute($user->id);
+        try {
+            get_user_courses::execute($user->id);
+            $this->fail('Expected moodle_exception was not thrown.');
+        } catch (\moodle_exception $e) {
+            $this->assertEquals('invaliduser', $e->errorcode);
+        }
     }
 
     // Course type classification tests.

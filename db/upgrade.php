@@ -23,7 +23,7 @@
  */
 
 defined('MOODLE_INTERNAL') || die();
-require_once(__DIR__.'/migrate.php');
+require_once(__DIR__ . '/migrate.php');
 
 /**
  * Upgrade the tool_painelava plugin.

@@ -15,56 +15,84 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Painel AVA Integration
- *
- * This module provides extensive analytics on a platform of choice
- * Currently support Google Analytics and Piwik
+ * Custom admin settings page for the Painel AVA integration.
  *
  * @package     tool_painelava
- * @category    upgrade
  * @copyright   2026 Kelson Medeiros <kelsoncm@gmail.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 class tool_painelava_admin_settingspage extends admin_settingpage
 {
-
-    public function __construct($admin_mode)
-    {
-        $plugin_name = 'tool_painelava';
-        parent::__construct($plugin_name, get_string('pluginname', $plugin_name), 'moodle/site:config', false, NULL);
-        $this->setup($admin_mode);
+    /**
+     * Constructor for the setting page.
+     *
+     * @param bool $adminmode Mode for admin settings.
+     */
+    public function __construct($adminmode) {
+        $pluginname = 'tool_painelava';
+        parent::__construct($pluginname, get_string('pluginname', $pluginname), 'moodle/site:config', false, null);
+        $this->setup($adminmode);
     }
 
-    function _($str, $args = null, $lazyload = false)
-    {
+    /**
+     * Helper translation wrapper for setting strings.
+     *
+     * @param string $str The identifier string.
+     * @param mixed $args Arguments for string substitution.
+     * @param bool $lazyload Lazy loading setting.
+     * @return string The translated string.
+     */
+    public function _($str, $args = null, $lazyload = false) {
         return get_string($str, $this->name);
     }
 
-    function add_heading($name)
-    {
+    /**
+     * Add a setting heading.
+     *
+     * @param string $name The setting identifier name.
+     */
+    public function add_heading($name) {
         $this->add(new admin_setting_heading("{$this->name}/$name", $this->_($name), $this->_("{$name}_desc")));
     }
 
-    function add_configtext($name, $default = '')
-    {
+    /**
+     * Add a config text field setting.
+     *
+     * @param string $name The setting name.
+     * @param string $default The default value.
+     */
+    public function add_configtext($name, $default = '') {
         $this->add(new admin_setting_configtext("{$this->name}/$name", $this->_($name), $this->_("{$name}_desc"), $default));
     }
 
-    function add_configtextarea($name, $default = '')
-    {
+    /**
+     * Add a config textarea setting.
+     *
+     * @param string $name The setting name.
+     * @param string $default The default value.
+     */
+    public function add_configtextarea($name, $default = '') {
         $this->add(new admin_setting_configtextarea("{$this->name}/$name", $this->_($name), $this->_("{$name}_desc"), $default));
     }
 
-    function add_configcheckbox($name, $default = 0)
-    {
+    /**
+     * Add a config checkbox setting.
+     *
+     * @param string $name The setting name.
+     * @param int $default The default value.
+     */
+    public function add_configcheckbox($name, $default = 0) {
         $this->add(new admin_setting_configcheckbox("{$this->name}/$name", $this->_($name), $this->_("{$name}_desc"), $default));
     }
 
-    function setup($admin_mode)
-    {
+    /**
+     * Set up all config items for the settings page.
+     *
+     * @param bool $adminmode Mode for admin settings.
+     */
+    public function setup($adminmode) {
         global $CFG;
-        if ($admin_mode) {
+        if ($adminmode) {
             $this->add_heading('auth_token_header');
             $this->add_configtext("auth_token");
             $this->add_configtext("painel_url", 'https://ava.ifrn.edu.br');

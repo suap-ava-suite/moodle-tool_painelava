@@ -39,8 +39,7 @@ use externallib_advanced_testcase;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \tool_painelava\external\get_user_courses
  */
-class get_user_courses_test extends externallib_advanced_testcase {
-
+final class external_test extends externallib_advanced_testcase {
     /**
      * Set up the test environment.
      */
@@ -49,9 +48,7 @@ class get_user_courses_test extends externallib_advanced_testcase {
         $this->resetAfterTest();
     }
 
-    // -----------------------------------------------------------------------
-    // Parameter & permission tests
-    // -----------------------------------------------------------------------
+    // Parameter & permission tests.
 
     /**
      * A regular user cannot view another user's courses without the capability.
@@ -97,14 +94,15 @@ class get_user_courses_test extends externallib_advanced_testcase {
         $admin = get_admin();
         $this->setUser($admin);
 
-        $this->expectException(\moodle_exception::class);
-        $this->expectExceptionMessage('invaliduser');
-        get_user_courses::execute($user->id);
+        try {
+            get_user_courses::execute($user->id);
+            $this->fail('Expected moodle_exception was not thrown.');
+        } catch (\moodle_exception $e) {
+            $this->assertEquals('invaliduser', $e->errorcode);
+        }
     }
 
-    // -----------------------------------------------------------------------
-    // Course type classification tests
-    // -----------------------------------------------------------------------
+    // Course type classification tests.
 
     /**
      * A course whose shortname starts with "FIC-" is classified as "fic".
@@ -117,7 +115,7 @@ class get_user_courses_test extends externallib_advanced_testcase {
         $this->setUser($user);
         $result = get_user_courses::execute($user->id);
 
-        $this->assertCount(1, $result['fic'],   'Course should be in fic group');
+        $this->assertCount(1, $result['fic'], 'Course should be in fic group');
         $this->assertCount(0, $result['outros'], 'No course should be in outros group');
         $this->assertEquals('FIC-001', $result['fic'][0]['shortname']);
     }
@@ -181,9 +179,7 @@ class get_user_courses_test extends externallib_advanced_testcase {
         $this->assertCount(1, $result['outros']);
     }
 
-    // -----------------------------------------------------------------------
-    // Return structure tests
-    // -----------------------------------------------------------------------
+    // Return structure tests.
 
     /**
      * Returned course data contains all expected keys.

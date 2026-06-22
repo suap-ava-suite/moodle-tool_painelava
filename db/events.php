@@ -30,16 +30,5 @@ defined('MOODLE_INTERNAL') || die();
 
 // List of observers. Each entry maps a Moodle core (or plugin) event to a
 // static callback method in this plugin.
-//
-// Example – react when a user is enrolled in a course:
-// $observers = [
-//     [
-//         'eventname'    => '\core\event\user_enrolment_created',
-//         'callback'     => '\tool_painelava\observer\enrolment_observer::user_enrolled',
-//         'includefile'  => null,
-//         'internal'     => false,
-//         'priority'     => 200,
-//     ],
-// ];
 
 $observers = [];

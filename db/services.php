@@ -32,7 +32,7 @@ $functions = [
         'type'         => 'read',
         'capabilities' => '',
         'ajax'         => true,
-        'loginrequired'=> true,
+        'loginrequired' => true,
         'services'     => [MOODLE_OFFICIAL_MOBILE_SERVICE],
     ],
 ];

@@ -1,7 +1,29 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ *
+ * @package    tool_painelava
+ * @copyright  2024 IFRN
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 namespace tool_painelava;
 
+// phpcs:ignore moodle.Files.MoodleInternal.MoodleInternalGlobalState
 if (!defined('NO_MOODLE_COOKIES')) {
     define('NO_MOODLE_COOKIES', true);
 }
@@ -11,55 +33,81 @@ require_once('../locallib.php');
 require_once("servicelib.php");
 
 
+/**
+ * Service to get all daily courses for a user, filtered and grouped.
+ *
+ * @package    tool_painelava
+ * @copyright  2024 IFRN
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class get_diarios_service extends \tool_painelava\service
 {
-
-    function get_cursos($all_diarios)
-    {
+    /**
+     * Extracts courses code and label information from daily course records.
+     *
+     * @param array $alldiarios All daily courses.
+     * @return array Cursos list with id and label.
+     */
+    public function get_cursos($alldiarios) {
         $result = [];
-        foreach ($all_diarios as $course) {
-            $curso_id = $course->curso_codigo ?? '';
-            $curso_desc = $course->curso_descricao ?? '';
-            
-            if (!empty($curso_id)) {
-                $result[$curso_id] = ['id' => $curso_id, 'label' => $curso_desc ?: $curso_id];
+        foreach ($alldiarios as $course) {
+            $cursoid = $course->curso_codigo ?? '';
+            $cursodesc = $course->curso_descricao ?? '';
+
+            if (!empty($cursoid)) {
+                $result[$cursoid] = ['id' => $cursoid, 'label' => $cursodesc ?: $cursoid];
             }
         }
         return array_values($result);
     }
 
-    function get_disciplinas($all_diarios)
-    {
+    /**
+     * Extracts disciplines code and label information from daily course records.
+     *
+     * @param array $alldiarios All daily courses.
+     * @return array Disciplinas list with id and label.
+     */
+    public function get_disciplinas($alldiarios) {
         $result = [];
-        foreach ($all_diarios as $course) {
-            $disciplina_id = $course->disciplina_id ?? '';
-            $disciplina_desc = $course->disciplina_descricao ?? '';
-            
-            if (!empty($disciplina_id)) {
-                $result[$disciplina_id] = ['id' => $disciplina_id, 'label' => $disciplina_desc ?: $disciplina_id];
+        foreach ($alldiarios as $course) {
+            $disciplinaid = $course->disciplina_id ?? '';
+            $disciplinadesc = $course->disciplina_descricao ?? '';
+
+            if (!empty($disciplinaid)) {
+                $result[$disciplinaid] = ['id' => $disciplinaid, 'label' => $disciplinadesc ?: $disciplinaid];
             }
         }
         return array_values($result);
     }
 
-    function get_semestres($all_diarios)
-    {
+    /**
+     * Extracts semestres information from daily course records.
+     *
+     * @param array $alldiarios All daily courses.
+     * @return array Semestres list with id and label.
+     */
+    public function get_semestres($alldiarios) {
         $result = [];
-        foreach ($all_diarios as $course) {
+        foreach ($alldiarios as $course) {
             $semestre = $course->turma_ano_periodo ?? '';
-            
+
             if (!empty($semestre)) {
-                $label = str_replace('/', '.', $semestre);                 
+                $label = str_replace('/', '.', $semestre);
                 $result[$semestre] = ['id' => $semestre, 'label' => $label];
             }
         }
         return array_values($result);
     }
 
-    function get_all_diarios($username)
-    {
+    /**
+     * Fetch all daily courses for a specific username.
+     *
+     * @param string $username Moodle username.
+     * @return array Courses list.
+     */
+    public function get_all_diarios($username) {
         global $DB;
-        
+
         $courses = \tool_painelava\get_recordset_as_array(
             "
             SELECT      c.id, c.shortname, c.fullname
@@ -72,12 +120,23 @@ class get_diarios_service extends \tool_painelava\service
             [strtolower($username)]
         );
 
-        if (empty($courses)) return [];
+        if (empty($courses)) {
+            return [];
+        }
 
-        $course_ids = array_column($courses, 'id');
-        
-        $campos = ['turma_ano_periodo', 'disciplina_id', 'disciplina_descricao', 'disciplina_sigla', 'curso_codigo', 'curso_descricao', 'diario_id', 'sala_tipo'];
-        $cfs = $this->get_custom_fields_for_courses($course_ids, $campos);
+        $courseids = array_column($courses, 'id');
+
+        $campos = [
+            'turma_ano_periodo',
+            'disciplina_id',
+            'disciplina_descricao',
+            'disciplina_sigla',
+            'curso_codigo',
+            'curso_descricao',
+            'diario_id',
+            'sala_tipo',
+        ];
+        $cfs = $this->get_custom_fields_for_courses($courseids, $campos);
 
         foreach ($courses as &$c) {
             $this->inject_custom_fields($c, $cfs[$c->id] ?? []);
@@ -90,18 +149,18 @@ class get_diarios_service extends \tool_painelava\service
      * Injeta os campos customizados padronizados no objeto do curso.
      * Aceita os dados de origem tanto como Array quanto como Objeto.
      */
-    private function inject_custom_fields($curso, $cf_data) {
-        $cf_data = (array) $cf_data;
+    private function inject_custom_fields($curso, $cfdata) {
+        $cfdata = (array) $cfdata;
 
-        $curso->turma_ano_periodo    = isset($cf_data['turma_ano_periodo']) ? trim($cf_data['turma_ano_periodo']) : '';
-        $curso->disciplina_id        = isset($cf_data['disciplina_id']) ? trim($cf_data['disciplina_id']) : '';
-        $curso->disciplina_descricao = isset($cf_data['disciplina_descricao']) ? trim($cf_data['disciplina_descricao']) : '';
-        $curso->disciplina_sigla     = isset($cf_data['disciplina_sigla']) ? trim($cf_data['disciplina_sigla']) : '';
-        $curso->curso_codigo         = isset($cf_data['curso_codigo']) ? trim($cf_data['curso_codigo']) : '';
-        $curso->curso_descricao      = isset($cf_data['curso_descricao']) ? trim($cf_data['curso_descricao']) : '';
-        $curso->diario_id            = isset($cf_data['diario_id']) ? trim($cf_data['diario_id']) : null;
-        $curso->sala_tipo            = isset($cf_data['sala_tipo']) ? trim($cf_data['sala_tipo']) : '';
-        
+        $curso->turma_ano_periodo    = isset($cfdata['turma_ano_periodo']) ? trim($cfdata['turma_ano_periodo']) : '';
+        $curso->disciplina_id        = isset($cfdata['disciplina_id']) ? trim($cfdata['disciplina_id']) : '';
+        $curso->disciplina_descricao = isset($cfdata['disciplina_descricao']) ? trim($cfdata['disciplina_descricao']) : '';
+        $curso->disciplina_sigla     = isset($cfdata['disciplina_sigla']) ? trim($cfdata['disciplina_sigla']) : '';
+        $curso->curso_codigo         = isset($cfdata['curso_codigo']) ? trim($cfdata['curso_codigo']) : '';
+        $curso->curso_descricao      = isset($cfdata['curso_descricao']) ? trim($cfdata['curso_descricao']) : '';
+        $curso->diario_id            = isset($cfdata['diario_id']) ? trim($cfdata['diario_id']) : null;
+        $curso->sala_tipo            = isset($cfdata['sala_tipo']) ? trim($cfdata['sala_tipo']) : '';
+
         return $curso;
     }
 
@@ -113,12 +172,12 @@ class get_diarios_service extends \tool_painelava\service
             return true;
         }
 
-        $match_q = empty($filtros['q']) || stripos($curso->shortname . ' ' . $curso->fullname, $filtros['q']) !== false;
-        $match_semestre   = empty($filtros['semestre'])   || $curso->turma_ano_periodo == $filtros['semestre'];
-        $match_disciplina = empty($filtros['disciplina']) || $curso->disciplina_id == $filtros['disciplina'];
-        $match_curso      = empty($filtros['curso'])      || $curso->curso_codigo == $filtros['curso'];
+        $matchq = empty($filtros['q']) || stripos($curso->shortname . ' ' . $curso->fullname, $filtros['q']) !== false;
+        $matchsemestre   = empty($filtros['semestre'])   || $curso->turma_ano_periodo == $filtros['semestre'];
+        $matchdisciplina = empty($filtros['disciplina']) || $curso->disciplina_id == $filtros['disciplina'];
+        $matchcurso      = empty($filtros['curso'])      || $curso->curso_codigo == $filtros['curso'];
 
-        return $match_q && $match_semestre && $match_disciplina && $match_curso;
+        return $matchq && $matchsemestre && $matchdisciplina && $matchcurso;
     }
 
     /**
@@ -126,31 +185,31 @@ class get_diarios_service extends \tool_painelava\service
      * Se $fields for vazio, busca TODOS os custom fields daqueles cursos.
      * Retorna um array no formato: [course_id => [shortname => value, ...]]
      */
-    private function get_custom_fields_for_courses(array $course_ids, array $fields_to_fetch = []) {
+    private function get_custom_fields_for_courses(array $courseids, array $fieldstofetch = []) {
         global $DB;
-        
-        if (empty($course_ids)) {
+
+        if (empty($courseids)) {
             return [];
         }
 
-        list($course_insql, $course_inparams) = $DB->get_in_or_equal($course_ids);
-        $params = $course_inparams;
+        [$courseinsql, $courseinparams] = $DB->get_in_or_equal($courseids);
+        $params = $courseinparams;
 
-        $field_filter = "";
-        if (!empty($fields_to_fetch)) {
-            list($field_insql, $field_inparams) = $DB->get_in_or_equal($fields_to_fetch);
-            $field_filter = "AND f.shortname $field_insql";
-            $params = array_merge($params, $field_inparams);
+        $fieldfilter = "";
+        if (!empty($fieldstofetch)) {
+            [$fieldinsql, $fieldinparams] = $DB->get_in_or_equal($fieldstofetch);
+            $fieldfilter = "AND f.shortname $fieldinsql";
+            $params = array_merge($params, $fieldinparams);
         }
 
         $sql = "SELECT d.id AS dataid, d.instanceid, f.shortname, d.value, d.charvalue
                 FROM {customfield_data} d
                 JOIN {customfield_field} f ON d.fieldid = f.id
-                WHERE d.instanceid $course_insql
-                $field_filter";
-                  
+                WHERE d.instanceid $courseinsql
+                $fieldfilter";
+
         $records = $DB->get_records_sql($sql, $params);
-        
+
         $results = [];
         if ($records) {
             foreach ($records as $rec) {
@@ -158,149 +217,198 @@ class get_diarios_service extends \tool_painelava\service
                 $results[$rec->instanceid][$rec->shortname] = is_string($val) ? trim($val) : $val;
             }
         }
-        
+
         return $results;
     }
 
 
     /**
-     * Busca os cursos disponíveis para autoinscrição e os devolve (com suas regras) 
+     * Busca os cursos disponíveis para autoinscrição e os devolve (com suas regras)
      * para que o Painel (Python) faça a avaliação do perfil.
      */
-    private function get_autoinscricoes($userid, $all_diarios) 
-    {
+    private function get_autoinscricoes($userid, $alldiarios) {
         global $DB, $CFG;
         $autoinscricoes = [];
 
-        $campo_restricao = $DB->get_record('customfield_field', ['shortname' => 'restricoes_de_autoinscricao']);
-        if (!$campo_restricao) return $autoinscricoes;
+        $camporestricao = $DB->get_record('customfield_field', ['shortname' => 'restricoes_de_autoinscricao']);
+        if (!$camporestricao) {
+            return $autoinscricoes;
+        }
 
-        $sql_vitrine = "SELECT c.id, c.fullname, c.shortname
+        $sqlvitrine = "SELECT c.id, c.fullname, c.shortname
                         FROM {course} c
                         JOIN {customfield_data} d ON d.instanceid = c.id
                         WHERE d.fieldid = ? AND c.visible = 1
                           AND (d.charvalue != '' OR d.value IS NOT NULL AND d.value != '')";
-                        
-        $cursos_vitrine = $DB->get_records_sql($sql_vitrine, [$campo_restricao->id]);
-        if (empty($cursos_vitrine)) return $autoinscricoes;
-            
-        $vitrine_ids = array_column($cursos_vitrine, 'id');
-        $campos_vitrine = ['restricoes_de_autoinscricao', 'turma_ano_periodo', 'disciplina_id', 'disciplina_descricao', 'disciplina_sigla', 'curso_codigo', 'curso_descricao', 'diario_id'];
-        
-        $cf_vitrine = $this->get_custom_fields_for_courses($vitrine_ids, $campos_vitrine);
 
-        $mapa_matriculados = [];
-        foreach ($all_diarios as $diario_aluno) {
-            $mapa_matriculados[$diario_aluno->id] = true;
+        $cursosvitrine = $DB->get_records_sql($sqlvitrine, [$camporestricao->id]);
+        if (empty($cursosvitrine)) {
+            return $autoinscricoes;
         }
 
-        foreach ($cursos_vitrine as $curso_vitrine) {
-            
-            $restricoes_str = trim($cf_vitrine[$curso_vitrine->id]['restricoes_de_autoinscricao'] ?? '');
+        $vitrineids = array_column($cursosvitrine, 'id');
+        $camposvitrine = [
+            'restricoes_de_autoinscricao',
+            'turma_ano_periodo',
+            'disciplina_id',
+            'disciplina_descricao',
+            'disciplina_sigla',
+            'curso_codigo',
+            'curso_descricao',
+            'diario_id',
+        ];
 
-            if (empty($restricoes_str)) {
+        $cfvitrine = $this->get_custom_fields_for_courses($vitrineids, $camposvitrine);
+
+        $mapamatriculados = [];
+        foreach ($alldiarios as $diarioaluno) {
+            $mapamatriculados[$diarioaluno->id] = true;
+        }
+
+        foreach ($cursosvitrine as $cursovitrine) {
+            $restricoesstr = trim($cfvitrine[$cursovitrine->id]['restricoes_de_autoinscricao'] ?? '');
+
+            if (empty($restricoesstr)) {
                 continue;
             }
 
-            $curso_vitrine->restricoes_de_autoinscricao = $restricoes_str;
-            $this->inject_custom_fields($curso_vitrine, $cf_vitrine[$curso_vitrine->id] ?? []);
+            $cursovitrine->restricoes_de_autoinscricao = $restricoesstr;
+            $this->inject_custom_fields($cursovitrine, $cfvitrine[$cursovitrine->id] ?? []);
 
-            $curso_vitrine->is_enrolled = isset($mapa_matriculados[$curso_vitrine->id]);
-            $curso_vitrine->viewurl = $CFG->wwwroot . '/course/view.php?id=' . $curso_vitrine->id;
-            
-            $autoinscricoes[] = $curso_vitrine;
+            $cursovitrine->is_enrolled = isset($mapamatriculados[$cursovitrine->id]);
+            $cursovitrine->viewurl = $CFG->wwwroot . '/course/view.php?id=' . $cursovitrine->id;
+
+            $autoinscricoes[] = $cursovitrine;
         }
 
         return $autoinscricoes;
     }
 
 
-    function get_diarios($username, $semestre, $situacao, $ordenacao, $disciplina, $curso, $arquetipo, $q, $page, $page_size)
-    {
+    /**
+     * Main method to get user's daily courses, groupings and available self-enrolments.
+     *
+     * @param string $username Username.
+     * @param string|null $semestre Semestre filter.
+     * @param string $situacao Situacao filter.
+     * @param string $ordenacao Sort field.
+     * @param string|null $disciplina Disciplina ID filter.
+     * @param string|null $curso Curso ID filter.
+     * @param string $arquetipo Arquetipo filter.
+     * @param string|null $q Query string search filter.
+     * @param int $page Page number.
+     * @param int $pagesize Page size.
+     * @return array Unified list of semestres, disciplinas, cursos, and grouped daily courses.
+     */
+    public function get_diarios(
+        $username,
+        $semestre,
+        $situacao,
+        $ordenacao,
+        $disciplina,
+        $curso,
+        $arquetipo,
+        $q,
+        $page,
+        $pagesize
+    ) {
         global $DB, $USER;
 
-        $usuario_moodle = $DB->get_record('user', ['username' => strtolower($username)]);
-        $userid = $usuario_moodle ? $usuario_moodle->id : null;
+        $usuariomoodle = $DB->get_record('user', ['username' => strtolower($username)]);
+        $userid = $usuariomoodle ? $usuariomoodle->id : null;
 
-        $all_diarios = [];
+        $alldiarios = [];
         $agrupamentos = [];
-        $enrolled_courses = [];
+        $enrolledcourses = [];
 
-        if ($usuario_moodle) {
-            $USER = $usuario_moodle;
+        if ($usuariomoodle) {
+            $USER = $usuariomoodle;
 
-            $all_diarios = $this->get_all_diarios($usuario_moodle->username);
-            
-            $enrolled_courses = $this->build_timeline_with_progress($usuario_moodle, $ordenacao, $situacao, $all_diarios);
+            $alldiarios = $this->get_all_diarios($usuariomoodle->username);
+
+            $enrolledcourses = $this->build_timeline_with_progress($usuariomoodle, $ordenacao, $situacao, $alldiarios);
         }
 
-        $filtros_busca = [
+        $filtrosbusca = [
             'semestre'    => $semestre,
             'disciplina'  => $disciplina,
             'curso'       => $curso,
             'q'           => $q,
-            'has_filters' => !empty($semestre . $disciplina . $curso . $q)
+            'has_filters' => !empty($semestre . $disciplina . $curso . $q),
         ];
-        $agrupamentos = $this->process_and_group_courses($usuario_moodle, $enrolled_courses, $all_diarios, $filtros_busca);
+        $agrupamentos = $this->process_and_group_courses($usuariomoodle, $enrolledcourses, $alldiarios, $filtrosbusca);
 
-        $vitrine = $this->get_autoinscricoes($userid, $all_diarios);
+        $vitrine = $this->get_autoinscricoes($userid, $alldiarios);
         if ($vitrine) {
             if (!isset($agrupamentos['autoinscricoes'])) {
                 $agrupamentos['autoinscricoes'] = [];
             }
-            foreach ($vitrine as $curso_vitrine) {
-                $agrupamentos['autoinscricoes'][] = $curso_vitrine;
+            foreach ($vitrine as $cursovitrine) {
+                $agrupamentos['autoinscricoes'][] = $cursovitrine;
             }
         }
 
-        $return_base = [
-            "semestres"   => $this->get_semestres($all_diarios),
-            "disciplinas" => $this->get_disciplinas($all_diarios),
-            "cursos"      => $this->get_cursos($all_diarios),
-        ]; 
+        $returnbase = [
+            "semestres"   => $this->get_semestres($alldiarios),
+            "disciplinas" => $this->get_disciplinas($alldiarios),
+            "cursos"      => $this->get_cursos($alldiarios),
+        ];
 
         if (!isset($agrupamentos['diarios'])) {
             $agrupamentos['diarios'] = [];
         }
 
-        return array_merge($return_base, $agrupamentos);
+        return array_merge($returnbase, $agrupamentos);
     }
 
     /**
      * Extrai e monta a timeline de cursos calculando o progresso apenas se o usuário for aluno.
      */
-    private function build_timeline_with_progress($usuario, $ordenacao, $situacao, $all_diarios)
-    {
+    private function build_timeline_with_progress($usuario, $ordenacao, $situacao, $alldiarios) {
         global $DB, $CFG;
-        $enrolled_courses = [];
+        $enrolledcourses = [];
 
-        $my_courses = enrol_get_my_courses('id, fullname, shortname, visible, startdate, enddate, enablecompletion, cacherev', $ordenacao);
+        $mycourses = enrol_get_my_courses(
+            'id, fullname, shortname, visible, startdate, enddate, enablecompletion, cacherev',
+            $ordenacao
+        );
 
-        // Pré-carrega contextos na RAM para evitar N+1
-        $my_course_ids = array_column($my_courses, 'id');
-        $this->preload_course_contexts($my_course_ids);
+        // Pré-carrega contextos na RAM para evitar N+1.
+        $mycourseids = array_column($mycourses, 'id');
+        $this->preload_course_contexts($mycourseids);
 
-        // Indexa os diários já carregados por ID para busca instantânea
-        $all_diarios_by_id = [];
-        foreach ($all_diarios as $d) {
-            $all_diarios_by_id[$d->id] = $d;
+        // Indexa os diários já carregados por ID para busca instantânea.
+        $alldiariosbyid = [];
+        foreach ($alldiarios as $d) {
+            $alldiariosbyid[$d->id] = $d;
         }
 
-        $fav_records = $DB->get_records('favourite', ['component' => 'core_course', 'itemtype' => 'courses', 'userid' => $usuario->id], '', 'itemid, id');
-        $hidden_prefs = $DB->get_records_select('user_preferences', "userid = ? AND name LIKE 'block_myoverview_hidden_course_%'", [$usuario->id], '', 'name, value');
-        $hidden_ids = [];
-        if ($hidden_prefs) {
-            foreach ($hidden_prefs as $pref) {
+        $favrecords = $DB->get_records(
+            'favourite',
+            ['component' => 'core_course', 'itemtype' => 'courses', 'userid' => $usuario->id],
+            '',
+            'itemid, id'
+        );
+        $hiddenprefs = $DB->get_records_select(
+            'user_preferences',
+            "userid = ? AND name LIKE 'block_myoverview_hidden_course_%'",
+            [$usuario->id],
+            '',
+            'name, value'
+        );
+        $hiddenids = [];
+        if ($hiddenprefs) {
+            foreach ($hiddenprefs as $pref) {
                 $id = str_replace('block_myoverview_hidden_course_', '', $pref->name);
-                $hidden_ids[$id] = true;
+                $hiddenids[$id] = true;
             }
         }
 
         $time = time();
-        foreach ($my_courses as $c) {
-            $ishidden = isset($hidden_ids[$c->id]);
-            $isfav = isset($fav_records[$c->id]);
-            
+        foreach ($mycourses as $c) {
+            $ishidden = isset($hiddenids[$c->id]);
+            $isfav = isset($favrecords[$c->id]);
+
             $class = 'all';
             if ($ishidden) {
                 $class = 'hidden';
@@ -313,12 +421,18 @@ class get_diarios_service extends \tool_painelava\service
             }
 
             if ($situacao !== 'all' && $situacao !== 'allincludinghidden') {
-                if ($situacao === 'favourites' && !$isfav) continue;
-                if ($situacao !== 'favourites' && $class !== $situacao) continue;
+                if ($situacao === 'favourites' && !$isfav) {
+                    continue;
+                }
+                if ($situacao !== 'favourites' && $class !== $situacao) {
+                    continue;
+                }
             }
-            if ($situacao === 'all' && $ishidden) continue;
+            if ($situacao === 'all' && $ishidden) {
+                continue;
+            }
 
-            $enrolled_courses[] = (object)[
+            $enrolledcourses[] = (object)[
                 'id'          => $c->id,
                 'fullname'    => $c->fullname,
                 'shortname'   => $c->shortname,
@@ -332,24 +446,23 @@ class get_diarios_service extends \tool_painelava\service
             ];
         }
 
-        return $enrolled_courses;
+        return $enrolledcourses;
     }
 
     /**
      * Abastece a memória RAM com os contextos dos cursos informados de uma só vez (Evita N+1).
      */
-    private function preload_course_contexts(array $course_ids)
-    {
+    private function preload_course_contexts(array $courseids) {
         global $DB;
-        if (empty($course_ids)) {
+        if (empty($courseids)) {
             return;
         }
 
-        list($ctx_sql, $ctx_params) = $DB->get_in_or_equal($course_ids);
-        $ctx_fields = \context_helper::get_preload_record_columns_sql('ctx');
-        $sql_contexts = "SELECT $ctx_fields FROM {context} ctx WHERE ctx.contextlevel = 50 AND ctx.instanceid $ctx_sql";
-        
-        if ($recordset = $DB->get_recordset_sql($sql_contexts, $ctx_params)) {
+        [$ctxsql, $ctxparams] = $DB->get_in_or_equal($courseids);
+        $ctxfields = \context_helper::get_preload_record_columns_sql('ctx');
+        $sqlcontexts = "SELECT $ctxfields FROM {context} ctx WHERE ctx.contextlevel = 50 AND ctx.instanceid $ctxsql";
+
+        if ($recordset = $DB->get_recordset_sql($sqlcontexts, $ctxparams)) {
             foreach ($recordset as $ctxrecord) {
                 \context_helper::preload_from_record($ctxrecord);
             }
@@ -360,39 +473,46 @@ class get_diarios_service extends \tool_painelava\service
     /**
      * Varre as matrículas da timeline, indexa metadados ausentes e faz a distribuição nas abas correspondentes.
      */
-    private function process_and_group_courses($usuario, array $enrolled_courses, array $all_diarios, array $filtros_busca)
-    {
-        global $CFG;
+    private function process_and_group_courses($usuario, array $enrolledcourses, array $alldiarios, array $filtrosbusca) {
         $agrupamentos = [];
-        if (empty($enrolled_courses)) {
+        if (empty($enrolledcourses)) {
             return $agrupamentos;
         }
 
-        // Indexa os diários por ID para busca rápida em memória
-        $all_diarios_by_id = [];
-        foreach ($all_diarios as $diario) {
-            $all_diarios_by_id[$diario->id] = $diario;
+        // Indexa os diários por ID para busca rápida em memória.
+        $alldiariosbyid = [];
+        foreach ($alldiarios as $diario) {
+            $alldiariosbyid[$diario->id] = $diario;
         }
 
-        // Verifica se algum curso vindo da timeline precisa ter seus custom fields carregados
-        $missing_ids = [];
-        foreach ($enrolled_courses as $diario) {
-            if (!isset($all_diarios_by_id[$diario->id])) {
-                $missing_ids[] = $diario->id;
+        // Verifica se algum curso vindo da timeline precisa ter seus custom fields carregados.
+        $missingids = [];
+        foreach ($enrolledcourses as $diario) {
+            if (!isset($alldiariosbyid[$diario->id])) {
+                $missingids[] = $diario->id;
             }
         }
 
-        $cfs_missing = [];
-        if (!empty($missing_ids)) {
-            $campos_relevantes = ['turma_ano_periodo', 'disciplina_id', 'disciplina_descricao', 'disciplina_sigla', 'curso_codigo', 'curso_descricao', 'diario_id', 'sala_tipo'];
-            $cfs_missing = $this->get_custom_fields_for_courses($missing_ids, $campos_relevantes);
+        $cfsmissing = [];
+        if (!empty($missingids)) {
+            $camposrelevantes = [
+                'turma_ano_periodo',
+                'disciplina_id',
+                'disciplina_descricao',
+                'disciplina_sigla',
+                'curso_codigo',
+                'curso_descricao',
+                'diario_id',
+                'sala_tipo',
+            ];
+            $cfsmissing = $this->get_custom_fields_for_courses($missingids, $camposrelevantes);
         }
 
-        // Distribuição estruturada nas abas (diarios, coordenacoes, projetos...)
-        foreach ($enrolled_courses as $diario) {
+        // Distribuição estruturada nas abas (diarios, coordenacoes, projetos...).
+        foreach ($enrolledcourses as $diario) {
             $coursecontext = \context_course::instance($diario->id);
 
-            $curso_limpo = (object) [
+            $cursolimpo = (object) [
                 'id'                 => $diario->id,
                 'fullname'           => $diario->fullname,
                 'shortname'          => $diario->shortname,
@@ -405,10 +525,10 @@ class get_diarios_service extends \tool_painelava\service
                 'can_set_visibility' => has_capability('moodle/course:visibility', $coursecontext, $usuario) ? 1 : 0,
             ];
 
-            $cf_dados = [];
-            if (isset($all_diarios_by_id[$diario->id])) {
-                $ad = $all_diarios_by_id[$diario->id];
-                $cf_dados = [
+            $cfdados = [];
+            if (isset($alldiariosbyid[$diario->id])) {
+                $ad = $alldiariosbyid[$diario->id];
+                $cfdados = [
                     'turma_ano_periodo'    => $ad->turma_ano_periodo,
                     'disciplina_id'        => $ad->disciplina_id,
                     'disciplina_descricao' => $ad->disciplina_descricao,
@@ -418,33 +538,37 @@ class get_diarios_service extends \tool_painelava\service
                     'diario_id'            => $ad->diario_id,
                     'sala_tipo'            => $ad->sala_tipo ?? '',
                 ];
-            } else if (isset($cfs_missing[$diario->id])) {
-                $cf_dados = $cfs_missing[$diario->id];
+            } else if (isset($cfsmissing[$diario->id])) {
+                $cfdados = $cfsmissing[$diario->id];
             }
 
-            $this->inject_custom_fields($curso_limpo, $cf_dados);
+            $this->inject_custom_fields($cursolimpo, $cfdados);
 
-            $sala_tipo_original = !empty($cf_dados['sala_tipo']) ? strtolower(trim($cf_dados['sala_tipo'])) : 'diarios';
-            $target_aba = ($sala_tipo_original === 'autoinscricoes') ? 'diarios' : $sala_tipo_original;
+            $salatipooriginal = !empty($cfdados['sala_tipo']) ? strtolower(trim($cfdados['sala_tipo'])) : 'diarios';
+            $targetaba = ($salatipooriginal === 'autoinscricoes') ? 'diarios' : $salatipooriginal;
 
-            if (!isset($agrupamentos[$target_aba])) {
-                $agrupamentos[$target_aba] = [];
+            if (!isset($agrupamentos[$targetaba])) {
+                $agrupamentos[$targetaba] = [];
             }
 
-            if ($target_aba === 'diarios') {
-                if ($this->atende_filtros($curso_limpo, $filtros_busca)) {
-                    $agrupamentos['diarios'][] = $curso_limpo;
+            if ($targetaba === 'diarios') {
+                if ($this->atende_filtros($cursolimpo, $filtrosbusca)) {
+                    $agrupamentos['diarios'][] = $cursolimpo;
                 }
             } else {
-                $agrupamentos[$target_aba][] = $curso_limpo;
+                $agrupamentos[$targetaba][] = $cursolimpo;
             }
         }
 
         return $agrupamentos;
     }
 
-    function do_call()
-    {
+    /**
+     * Executes the service call to fetch user daily courses.
+     *
+     * @return array Service output.
+     */
+    public function do_call() {
         return $this->get_diarios(
             \tool_painelava\aget($_GET, 'username', null),
             \tool_painelava\aget($_GET, 'semestre', null),

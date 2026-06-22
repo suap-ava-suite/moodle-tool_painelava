@@ -32,33 +32,107 @@ defined('MOODLE_INTERNAL') || die();
 global $CFG;
 require_once($CFG->dirroot . '/admin/tool/painelava/locallib.php');
 
+/**
+ * Helper class for handling migrations (course/user custom fields).
+ *
+ * @package    tool_painelava
+ * @copyright  2026 Kelson Medeiros <kelsoncm@gmail.com>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class migration_helpers {
-    
-    public static function save_course_custom_field($categoryid, $shortname, $name, $type = 'text', $configdata = '{"required":"0","uniquevalues":"0","displaysize":50,"maxlength":250,"ispassword":"0","link":"","locked":"0","visibility":"0"}')
-    {
+    /**
+     * Saves or creates a course custom field.
+     *
+     * @param int $categoryid The custom field category ID.
+     * @param string $shortname The shortname of the custom field.
+     * @param string $name The name of the custom field.
+     * @param string $type The field type (e.g., text, checkbox).
+     * @param string|null $configdata JSON string of configuration data.
+     * @return \stdClass The custom field record.
+     */
+    public static function save_course_custom_field($categoryid, $shortname, $name, $type = 'text', $configdata = null) {
+        if ($configdata === null) {
+            $configdata = json_encode([
+                'required' => '0',
+                'uniquevalues' => '0',
+                'displaysize' => 50,
+                'maxlength' => 250,
+                'ispassword' => '0',
+                'link' => '',
+                'locked' => '0',
+                'visibility' => '0',
+            ]);
+        }
         return get_or_create(
             'customfield_field',
             ['shortname' => $shortname],
-            ['categoryid' => $categoryid, 'name' => $name, 'type' => $type, 'configdata' => $configdata, 'timecreated' => time(), 'timemodified' => time(), 'sortorder' => get_last_sort_order('customfield_field')]
+            [
+                'categoryid' => $categoryid,
+                'name' => $name,
+                'type' => $type,
+                'configdata' => $configdata,
+                'timecreated' => time(),
+                'timemodified' => time(),
+                'sortorder' => get_last_sort_order('customfield_field'),
+            ]
         );
     }
 
-    public static function save_user_custom_field($categoryid, $shortname, $name, $datatype = 'text', $visible = 1, $param1value = NULL, $param2value = NULL)
-    {
+    /**
+     * Saves or creates a user custom field.
+     *
+     * @param int $categoryid The user info category ID.
+     * @param string $shortname The shortname of the custom field.
+     * @param string $name The name of the custom field.
+     * @param string $datatype The data type (e.g., text, menu).
+     * @param int $visible Visibility setting (1 = visible, 0 = not visible).
+     * @param mixed $param1value Optional parameter value 1.
+     * @param mixed $param2value Optional parameter value 2.
+     * @return \stdClass The user info field record.
+     */
+    public static function save_user_custom_field(
+        $categoryid,
+        $shortname,
+        $name,
+        $datatype = 'text',
+        $visible = 1,
+        $param1value = null,
+        $param2value = null
+    ) {
         return get_or_create(
             'user_info_field',
             ['shortname' => $shortname],
-            ['categoryid' => $categoryid, 'name' => $name, 'description' => $name, 'descriptionformat' => 2, 'datatype' => $datatype, 'visible' => $visible, 'param1' => $param1value, 'param2' => $param2value]
+            [
+                'categoryid' => $categoryid,
+                'name' => $name,
+                'description' => $name,
+                'descriptionformat' => 2,
+                'datatype' => $datatype,
+                'visible' => $visible,
+                'param1' => $param1value,
+                'param2' => $param2value,
+            ]
         );
     }
 
-    public static function bulk_course_custom_field()
-    {
+    /**
+     * Bulk creates required course custom fields.
+     *
+     * @return void
+     */
+    public static function bulk_course_custom_field() {
         global $DB;
         $cid = get_or_create(
             'customfield_category',
             ['name' => 'Painel AVA', 'component' => 'core_course', 'area' => 'course'],
-            ['sortorder' => get_last_sort_order('customfield_category'), 'itemid' => 0, 'contextid' => 1, 'descriptionformat' => 0, 'timecreated' => time(), 'timemodified' => time()]
+            [
+                'sortorder' => get_last_sort_order('customfield_category'),
+                'itemid' => 0,
+                'contextid' => 1,
+                'descriptionformat' => 0,
+                'timecreated' => time(),
+                'timemodified' => time(),
+            ]
         )->id;
 
         self::save_course_custom_field($cid, 'sala_tipo', 'Tipo de sala');
@@ -77,25 +151,24 @@ class migration_helpers {
  * @param int $oldversion Previously installed plugin version.
  * @return bool True when migration steps complete successfully.
  */
-function tool_painelava_migrate($oldversion)
-{
+function tool_painelava_migrate($oldversion) {
     global $DB;
 
     $dbman = $DB->get_manager();
 
     $logging = new \xmldb_table("tool_painelava_logging");
     if (!$dbman->table_exists($logging)) {
-        $logging->add_field("id",                   XMLDB_TYPE_INTEGER, '10',       XMLDB_UNSIGNED, XMLDB_NOTNULL, XMLDB_SEQUENCE,  null, null, null);
-        $logging->add_field("userid",               XMLDB_TYPE_INTEGER, '10',       XMLDB_UNSIGNED, XMLDB_NOTNULL, null,            null, null, null);
-        $logging->add_field("targetuserid",         XMLDB_TYPE_INTEGER, '10',       XMLDB_UNSIGNED, XMLDB_NOTNULL, null,            null, null, null);
-        $logging->add_field("user_ipaddress",       XMLDB_TYPE_CHAR,    '45',       null, null, null,            null, null, null);
-        $logging->add_field("targetuser_ipaddress", XMLDB_TYPE_CHAR,    '45',       null, null, null,            null, null, null);
-        $logging->add_field("timecreated",          XMLDB_TYPE_INTEGER, '10',       XMLDB_UNSIGNED, XMLDB_NOTNULL, null,            null, null, null);
+        $logging->add_field("id", XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NOTNULL, XMLDB_SEQUENCE, null, null, null);
+        $logging->add_field("userid", XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NOTNULL, null, null, null, null);
+        $logging->add_field("targetuserid", XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NOTNULL, null, null, null, null);
+        $logging->add_field("user_ipaddress", XMLDB_TYPE_CHAR, '45', null, null, null, null, null, null);
+        $logging->add_field("targetuser_ipaddress", XMLDB_TYPE_CHAR, '45', null, null, null, null, null, null);
+        $logging->add_field("timecreated", XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NOTNULL, null, null, null, null);
 
-        $logging->add_key("primary",          XMLDB_KEY_PRIMARY,  ["id"],         null,       null);
+        $logging->add_key("primary", XMLDB_KEY_PRIMARY, ["id"], null, null);
 
-        $logging->add_index('idx_users',              XMLDB_INDEX_NOTUNIQUE, ['targetuserid', 'userid']);
-        $logging->add_index('idx_timecreated',        XMLDB_INDEX_NOTUNIQUE, ['timecreated']);
+        $logging->add_index('idx_users', XMLDB_INDEX_NOTUNIQUE, ['targetuserid', 'userid']);
+        $logging->add_index('idx_timecreated', XMLDB_INDEX_NOTUNIQUE, ['timecreated']);
 
         $dbman->create_table($logging);
     }

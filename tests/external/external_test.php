@@ -48,9 +48,7 @@ final class external_test extends externallib_advanced_testcase {
         $this->resetAfterTest();
     }
 
-    // -----------------------------------------------------------------------
-    // Parameter & permission tests
-    // -----------------------------------------------------------------------
+    // Parameter & permission tests.
 
     /**
      * A regular user cannot view another user's courses without the capability.
@@ -101,9 +99,7 @@ final class external_test extends externallib_advanced_testcase {
         get_user_courses::execute($user->id);
     }
 
-    // -----------------------------------------------------------------------
-    // Course type classification tests
-    // -----------------------------------------------------------------------
+    // Course type classification tests.
 
     /**
      * A course whose shortname starts with "FIC-" is classified as "fic".
@@ -180,9 +176,7 @@ final class external_test extends externallib_advanced_testcase {
         $this->assertCount(1, $result['outros']);
     }
 
-    // -----------------------------------------------------------------------
-    // Return structure tests
-    // -----------------------------------------------------------------------
+    // Return structure tests.
 
     /**
      * Returned course data contains all expected keys.

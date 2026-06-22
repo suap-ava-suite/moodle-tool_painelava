@@ -26,8 +26,6 @@
 
 namespace tool_painelava\event;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Event fired when user courses are requested via the Painel AVA external API.
  *

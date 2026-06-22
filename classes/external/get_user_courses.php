@@ -166,10 +166,6 @@ class get_user_courses extends external_api {
         ]);
     }
 
-    // -----------------------------------------------------------------------
-    // Private helpers
-    // -----------------------------------------------------------------------
-
     /**
      * Build the return structure for a single course.
      *
@@ -379,8 +375,6 @@ class get_user_courses extends external_api {
                         'name'      => $field->get('name'),
                         'type'      => $field->get('type'),
                         'value'     => $fielddata->export_value(),
-                        // get_value() is part of the stable data API since Moodle 3.10+
-                        // and is guaranteed available in our required Moodle 4.0+.
                         'valueraw'  => $fielddata->get_value(),
                     ];
                 }

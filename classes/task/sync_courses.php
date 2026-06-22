@@ -24,8 +24,6 @@
 
 namespace tool_painelava\task;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Scheduled task that refreshes cached course panel data.
  *

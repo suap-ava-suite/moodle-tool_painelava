@@ -26,10 +26,18 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 namespace tool_painelava;
+
+// phpcs:ignore moodle.Files.MoodleInternal.MoodleInternalGlobalState
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+/**
+ * Exception handler to output exceptions in JSON format.
+ *
+ * @param \Throwable $exception The exception to handle.
+ * @return void
+ */
 function exception_handler($exception) {
     /*
         200 – 208, 226,
@@ -37,13 +45,13 @@ function exception_handler($exception) {
         400 – 417, 422 – 424, 426, 428 – 429, 431
         500 – 508, 510 – 511
     */
-    $error_code = $exception->getCode() ?: 500;
-    http_response_code($error_code);
-    die(json_encode(["error" => ["message" => $exception->getMessage(), "code" => $error_code]]));
+    $errorcode = $exception->getCode() ?: 500;
+    http_response_code($errorcode);
+    die(json_encode(["error" => ["message" => $exception->getMessage(), "code" => $errorcode]]));
 }
 
 try {
-    // Desabilita verificação CSRF para esta API
+    // Desabilita verificação CSRF para esta API.
     if (!defined('NO_MOODLE_COOKIES')) {
         define('NO_MOODLE_COOKIES', true);
     }
@@ -68,23 +76,22 @@ try {
 
         'sync_user_preference',
         'sync_up_enrolments',
-        // 'sync_down_attendances',
         'sync_down_grades',
         'enrol_course',
         'suspend_enrol',
     ];
     $params = explode('&', $_SERVER["QUERY_STRING"]);
-    $service_name = $params[0];
+    $servicename = $params[0];
 
-    if (!in_array($service_name, $whitelist)) {
+    if (!in_array($servicename, $whitelist)) {
         throw new \Exception("Serviço não existe", 404);
     }
 
-    require_once __DIR__ . "/{$service_name}.php";
+    require_once(__DIR__ . "/{$servicename}.php");
 
-    $service_class = "\\tool_painelava\\{$service_name}_service";
+    $serviceclass = "\\tool_painelava\\{$servicename}_service";
 
-    $service = new $service_class();
+    $service = new $serviceclass();
     $service->call();
 } catch (\Throwable $e) {
     exception_handler($e);

@@ -14,21 +14,28 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
+namespace tool_painelava;
+
+defined('MOODLE_INTERNAL') || die();
+
+require_once('../locallib.php');
+require_once("servicelib.php");
+
 /**
+ * Service to get unread conversation and notification counts.
  *
  * @package    tool_painelava
  * @copyright  2024 IFRN
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-namespace tool_painelava;
-
-require_once('../locallib.php');
-require_once("servicelib.php");
-
 class get_atualizacoes_counts_service extends \tool_painelava\service
 {
-    function do_call() {
+    /**
+     * Executes the service call to fetch updates count.
+     *
+     * @return array The updates counts or error details.
+     */
+    public function do_call() {
         global $DB, $USER;
         $username = strtolower($_GET['username']);
         $USER = $DB->get_record('user', ['username' => $username]);
@@ -43,7 +50,13 @@ class get_atualizacoes_counts_service extends \tool_painelava\service
         }
     }
 
-    function get_atualizacoes_counts($useridto) {
+    /**
+     * Retrieves unread conversations and popup notifications counts.
+     *
+     * @param int $useridto The target user ID.
+     * @return array Updates counts.
+     */
+    public function get_atualizacoes_counts($useridto) {
         return [
             "unread_conversations_count" => \core_message_external::get_unread_conversations_count($useridto),
             "unread_popup_notification_count" => \message_popup_external::get_unread_popup_notification_count($useridto),

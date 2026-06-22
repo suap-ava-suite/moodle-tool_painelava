@@ -14,16 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-/**
- *
- * @package    tool_painelava
- * @copyright  2024 IFRN
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
 namespace tool_painelava;
 
-// Desabilita verificação CSRF para esta API
+// phpcs:ignore moodle.Files.MoodleInternal.MoodleInternalGlobalState
 if (!defined('NO_MOODLE_COOKIES')) {
     define('NO_MOODLE_COOKIES', true);
 }
@@ -34,9 +27,22 @@ require_once($CFG->dirroot . '/course/externallib.php');
 require_once('../locallib.php');
 require_once("servicelib.php");
 
+/**
+ * Service to set course visibility.
+ *
+ * @package    tool_painelava
+ * @copyright  2024 IFRN
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class set_visible_course_service extends \tool_painelava\service
 {
-    function do_call() {
+    /**
+     * Executes the service call to toggle course visibility.
+     *
+     * @return array Status indicating if call was successful.
+     * @throws \Exception if the user doesn't have permissions to toggle visibility.
+     */
+    public function do_call() {
         global $DB, $USER;
 
         $username  = \tool_painelava\aget($_GET, 'username', '');
@@ -59,7 +65,14 @@ class set_visible_course_service extends \tool_painelava\service
         return $this->execute($course, $visible);
     }
 
-    function execute($course, $visible) {
+    /**
+     * Updates the visibility of the course in the database.
+     *
+     * @param \stdClass $course The course record.
+     * @param int $visible Visibility flag (1 for visible, 0 for hidden).
+     * @return array Status array.
+     */
+    public function execute($course, $visible) {
         global $DB;
 
         $course->visible = $visible;

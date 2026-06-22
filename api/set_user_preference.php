@@ -14,16 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-/**
- *
- * @package    tool_painelava
- * @copyright  2024 IFRN
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
 namespace tool_painelava;
 
-// Desabilita verificação CSRF para esta API
+// phpcs:ignore moodle.Files.MoodleInternal.MoodleInternalGlobalState
 if (!defined('NO_MOODLE_COOKIES')) {
     define('NO_MOODLE_COOKIES', true);
 }
@@ -32,12 +25,25 @@ require_once('../../../../config.php');
 require_once('../locallib.php');
 require_once("servicelib.php");
 
+/**
+ * Service to set user preference.
+ *
+ * @package    tool_painelava
+ * @copyright  2024 IFRN
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class set_user_preference_service extends \tool_painelava\service
 {
-    function do_call() {
+    /**
+     * Executes the service call to update a user's preference.
+     *
+     * @return array Status and updated preference details.
+     * @throws \Exception If parameters are missing or user is not found.
+     */
+    public function do_call() {
         global $DB, $USER;
 
-        // 🔍 Buscar usuário pelo username informado
+        // Buscar usuário pelo username informado.
         $username = optional_param('username', null, PARAM_USERNAME);
         if ($username === null) {
             throw new \Exception("Parâmetro 'username' é obrigatório", 400);
@@ -48,7 +54,7 @@ class set_user_preference_service extends \tool_painelava\service
             throw new \Exception('Usuário não encontrado.', 404);
         }
 
-        // 🧰 Pega os parâmetros enviados
+        // Pega os parâmetros enviados.
         $name = optional_param('name', null, PARAM_ALPHANUMEXT);
         $value = optional_param('value', null, PARAM_RAW);
 
@@ -56,7 +62,7 @@ class set_user_preference_service extends \tool_painelava\service
             throw new \Exception("Parâmetros 'name' e 'value' são obrigatórios", 400);
         }
 
-        // ✅ Salva a preferência usando a API oficial
+        // Salva a preferência usando a API oficial.
         if (in_array($value, [true, 'true', 1, '1'], true)) {
             $value = '1';
         } else if (in_array($value, [false, 'false', 0, '0'], true)) {
@@ -68,7 +74,7 @@ class set_user_preference_service extends \tool_painelava\service
         }
         set_user_preference($name, $value, $USER->id);
 
-        // 📬 Retorna uma resposta simples em JSON
+        // Retorna uma resposta simples em JSON.
         return [
             'error' => false,
             'message' => 'Preferência atualizada com sucesso',

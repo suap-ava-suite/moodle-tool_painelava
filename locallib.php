@@ -21,7 +21,6 @@
  * Currently support Google Analytics and Piwik
  *
  * @package     tool_painelava
- * @category    integration
  * @copyright   2025 Kelson Medeiros <kelsoncm@gmail.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -29,6 +28,13 @@
 namespace tool_painelava;
 
 
+/**
+ * Get the next sort order value for a given table.
+ *
+ * @param string $tablename The name of the database table.
+ * @return int The next sort order value.
+ * @throws \coding_exception If the table name is invalid.
+ */
 function get_last_sort_order($tablename) {
     global $DB;
 
@@ -41,6 +47,15 @@ function get_last_sort_order($tablename) {
 }
 
 
+/**
+ * Gets a record matching the keys, or creates it with keys and values.
+ *
+ * @param string $tablename The name of the database table.
+ * @param array $keys The search keys to locate the record.
+ * @param array $values The default values to use if creating a new record.
+ * @return \stdClass The existing or newly created record.
+ * @throws \coding_exception If the table name is invalid.
+ */
 function get_or_create($tablename, $keys, $values) {
     global $DB;
 
@@ -57,16 +72,37 @@ function get_or_create($tablename, $keys, $values) {
 }
 
 
+/**
+ * Helper function to retrieve a configuration value for this tool.
+ *
+ * @param string $name The name of the configuration setting.
+ * @return string|false The configuration value, or false if not found.
+ */
 function config($name) {
     return get_config('tool_painelava', $name);
 }
 
 
+/**
+ * Safe array get function to retrieve a value by key.
+ *
+ * @param array $array The source array.
+ * @param string|int $key The key to look up.
+ * @param mixed $default The default value to return if the key is not found.
+ * @return mixed The array value, or the default value.
+ */
 function aget($array, $key, $default = null) {
     return \array_key_exists($key, $array) ? $array[$key] : $default;
 }
 
 
+/**
+ * Retrieves a recordset and returns it as an array, ensuring the recordset is closed.
+ *
+ * @param string $sql The SQL query to execute.
+ * @param array|null $params Query parameters.
+ * @return array The array of retrieved records.
+ */
 function get_recordset_as_array($sql, $params) {
     global $DB;
 

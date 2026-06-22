@@ -15,6 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
+ * API script to sync user preferences to external painel.
  *
  * @package    tool_painelava
  * @copyright  2024 IFRN
@@ -23,7 +24,7 @@
 
 namespace tool_painelava;
 
-// Desabilita verificação CSRF para esta API
+// phpcs:ignore moodle.Files.MoodleInternal.MoodleInternalGlobalState
 if (!defined('NO_MOODLE_COOKIES')) {
     define('NO_MOODLE_COOKIES', true);
 }
@@ -31,24 +32,30 @@ if (!defined('NO_MOODLE_COOKIES')) {
 require_once('../../../../config.php');
 require_once("../locallib.php");
 
-// A autenticação feita via token
-$sync_up_auth_token = config('auth_token');
-$painel_url = config('painel_url');
+// A autenticação feita via token.
+$syncupautotoken = config('auth_token');
+$painelurl = config('painel_url');
 
-// força saída JSON limpa
+// Força saída JSON limpa.
 header('Content-Type: application/json; charset=utf-8');
 while (ob_get_level()) {
     ob_end_clean();
 }
 
-// Função para saída JSON consistente
+/**
+ * Outputs consistent JSON response.
+ *
+ * @param mixed $data The data to encode as JSON.
+ * @param int $status HTTP status code.
+ * @return void
+ */
 function output_json($data, $status = 200) {
     http_response_code($status);
     echo json_encode($data);
     exit;
 }
 
-// Captura todos os erros como exceção (para não poluir o JSON)
+// Captura todos os erros como exceção (para não poluir o JSON).
 set_error_handler(function ($severity, $message, $file, $line) {
     throw new \ErrorException($message, 500, $severity, $file, $line);
 });
@@ -56,14 +63,14 @@ set_error_handler(function ($severity, $message, $file, $line) {
 try {
     global $USER;
 
-    // Parâmetros via GET
+    // Parâmetros via GET.
     $category = required_param('category', PARAM_RAW);
     $key      = required_param('key', PARAM_RAW);
     $value    = required_param('value', PARAM_RAW);
 
     $username = $USER->username;
 
-    $url = $painel_url . '/api/v1/set_user_preference/'
+    $url = $painelurl . '/api/v1/set_user_preference/'
          . '?username=' . urlencode($username)
          . '&category=' . urlencode($category)
          . '&key=' . urlencode($key)
@@ -73,7 +80,7 @@ try {
     $options = [
         'CURLOPT_RETURNTRANSFER' => true,
         'CURLOPT_TIMEOUT' => 10,
-        'CURLOPT_HTTPHEADER' => ["Authorization: Token $sync_up_auth_token"],
+        'CURLOPT_HTTPHEADER' => ["Authorization: Token $syncupautotoken"],
         'CURLOPT_FAILONERROR' => true,
     ];
 

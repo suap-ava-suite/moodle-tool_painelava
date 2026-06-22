@@ -39,8 +39,7 @@ use externallib_advanced_testcase;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \tool_painelava\external\get_user_courses
  */
-class get_user_courses_test extends externallib_advanced_testcase {
-
+final class external_test extends externallib_advanced_testcase {
     /**
      * Set up the test environment.
      */
@@ -117,7 +116,7 @@ class get_user_courses_test extends externallib_advanced_testcase {
         $this->setUser($user);
         $result = get_user_courses::execute($user->id);
 
-        $this->assertCount(1, $result['fic'],   'Course should be in fic group');
+        $this->assertCount(1, $result['fic'], 'Course should be in fic group');
         $this->assertCount(0, $result['outros'], 'No course should be in outros group');
         $this->assertEquals('FIC-001', $result['fic'][0]['shortname']);
     }

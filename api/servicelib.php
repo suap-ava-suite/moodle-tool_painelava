@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
  * Painel AVA Integration
  *
@@ -13,14 +28,12 @@
 
 namespace tool_painelava;
 
-
 class service {
-
     function authenticate() {
         $sync_up_auth_token = config('auth_token');
 
         $headers = getallheaders();
-        $authentication_key = array_key_exists('Authentication', $headers) ? "Authentication": "authentication";
+        $authentication_key = array_key_exists('Authentication', $headers) ? "Authentication" : "authentication";
         if (!array_key_exists($authentication_key, $headers)) {
             throw new \Exception("Bad Request - Authentication not informed", 400);
         }
@@ -38,5 +51,4 @@ class service {
     function do_call() {
         throw new \Exception("Não implementado", 501);
     }
-
 }

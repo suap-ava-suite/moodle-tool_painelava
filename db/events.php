@@ -33,13 +33,13 @@ defined('MOODLE_INTERNAL') || die();
 //
 // Example – react when a user is enrolled in a course:
 // $observers = [
-//     [
-//         'eventname'    => '\core\event\user_enrolment_created',
-//         'callback'     => '\tool_painelava\observer\enrolment_observer::user_enrolled',
-//         'includefile'  => null,
-//         'internal'     => false,
-//         'priority'     => 200,
-//     ],
+// [
+// 'eventname'    => '\core\event\user_enrolment_created',
+// 'callback'     => '\tool_painelava\observer\enrolment_observer::user_enrolled',
+// 'includefile'  => null,
+// 'internal'     => false,
+// 'priority'     => 200,
+// ],
 // ];
 
 $observers = [];

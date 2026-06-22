@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
  * Painel AVA Integration
  *
@@ -17,14 +32,14 @@ error_reporting(E_ALL);
 
 function exception_handler($exception) {
     /*
-        200 – 208, 226, 
+        200 – 208, 226,
         300 – 305, 307, 308
         400 – 417, 422 – 424, 426, 428 – 429, 431
         500 – 508, 510 – 511
     */
     $error_code = $exception->getCode() ?: 500;
     http_response_code($error_code);
-    die(json_encode(["error"=>["message"=>$exception->getMessage(), "code"=>$error_code]]));
+    die(json_encode(["error" => ["message" => $exception->getMessage(), "code" => $error_code]]));
 }
 
 try {
@@ -40,7 +55,7 @@ try {
     error_reporting(E_ALL);
 
     set_exception_handler('\tool_painelava\exception_handler');
-    
+
     $whitelist = [
         'get_diarios',
         'get_progresso',
@@ -50,28 +65,27 @@ try {
         'set_favourite_course',
         'set_visible_course',
         'set_user_preference',
-        
+
         'sync_user_preference',
         'sync_up_enrolments',
         // 'sync_down_attendances',
         'sync_down_grades',
         'enrol_course',
-        'suspend_enrol'
+        'suspend_enrol',
     ];
     $params = explode('&', $_SERVER["QUERY_STRING"]);
     $service_name = $params[0];
 
     if (!in_array($service_name, $whitelist)) {
-        throw new \Exception("Serviço não existe", 404);       
+        throw new \Exception("Serviço não existe", 404);
     }
-    
+
     require_once __DIR__ . "/{$service_name}.php";
 
     $service_class = "\\tool_painelava\\{$service_name}_service";
-    
+
     $service = new $service_class();
     $service->call();
-
-    } catch (\Throwable $e) {   
-        exception_handler($e);
-    }
+} catch (\Throwable $e) {
+    exception_handler($e);
+}

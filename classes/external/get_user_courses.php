@@ -49,7 +49,6 @@ use moodle_exception;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class get_user_courses extends external_api {
-
     /**
      * Defines the parameters for this external function.
      *
@@ -178,21 +177,21 @@ class get_user_courses extends external_api {
      */
     private static function get_course_return_structure(): external_single_structure {
         return new external_single_structure([
-            'id'           => new external_value(PARAM_INT,  'Course ID'),
+            'id'           => new external_value(PARAM_INT, 'Course ID'),
             'shortname'    => new external_value(PARAM_TEXT, 'Course short name'),
             'fullname'     => new external_value(PARAM_TEXT, 'Course full name'),
-            'idnumber'     => new external_value(PARAM_RAW,  'Course ID number'),
-            'summary'      => new external_value(PARAM_RAW,  'Course summary'),
-            'summaryformat'=> new external_value(PARAM_INT,  'Summary format'),
-            'startdate'    => new external_value(PARAM_INT,  'Course start date (unix timestamp)'),
-            'enddate'      => new external_value(PARAM_INT,  'Course end date (unix timestamp)'),
-            'visible'      => new external_value(PARAM_INT,  'Whether the course is visible'),
-            'category'     => new external_value(PARAM_INT,  'Course category ID'),
+            'idnumber'     => new external_value(PARAM_RAW, 'Course ID number'),
+            'summary'      => new external_value(PARAM_RAW, 'Course summary'),
+            'summaryformat' => new external_value(PARAM_INT, 'Summary format'),
+            'startdate'    => new external_value(PARAM_INT, 'Course start date (unix timestamp)'),
+            'enddate'      => new external_value(PARAM_INT, 'Course end date (unix timestamp)'),
+            'visible'      => new external_value(PARAM_INT, 'Whether the course is visible'),
+            'category'     => new external_value(PARAM_INT, 'Course category ID'),
             'course_type'  => new external_value(PARAM_ALPHANUMEXT, 'Identified course type'),
             'role'         => new external_value(PARAM_TEXT, 'User role shortname in this course'),
             'roles'        => new external_multiple_structure(
                 new external_single_structure([
-                    'roleid'    => new external_value(PARAM_INT,  'Role ID'),
+                    'roleid'    => new external_value(PARAM_INT, 'Role ID'),
                     'shortname' => new external_value(PARAM_TEXT, 'Role shortname'),
                     'name'      => new external_value(PARAM_TEXT, 'Role name'),
                 ]),
@@ -313,10 +312,10 @@ class get_user_courses extends external_api {
         $shortname = $course->shortname;
 
         $prefixes = [
-            'fic'         => $config->prefix_fic         ?? 'FIC-',
+            'fic'         => $config->prefix_fic ?? 'FIC-',
             'coordenacao' => $config->prefix_coordenacao ?? 'COORD-',
             'laboratorio' => $config->prefix_laboratorio ?? 'LAB-',
-            'modelo'      => $config->prefix_modelo      ?? 'MODELO-',
+            'modelo'      => $config->prefix_modelo ?? 'MODELO-',
         ];
 
         foreach ($prefixes as $type => $prefix) {

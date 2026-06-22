@@ -1,4 +1,26 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ *
+ * @package    tool_painelava
+ * @copyright  2024 IFRN
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace tool_painelava;
 
 // Desabilita verificação CSRF para esta API
@@ -9,13 +31,15 @@ if (!defined('NO_MOODLE_COOKIES')) {
 require_once('../../../../config.php');
 require_once("../locallib.php");
 
-// A autenticação feita via token 
+// A autenticação feita via token
 $sync_up_auth_token = config('auth_token');
 $painel_url = config('painel_url');
 
 // força saída JSON limpa
 header('Content-Type: application/json; charset=utf-8');
-while (ob_get_level()) { ob_end_clean(); }
+while (ob_get_level()) {
+    ob_end_clean();
+}
 
 // Função para saída JSON consistente
 function output_json($data, $status = 200) {
@@ -25,7 +49,7 @@ function output_json($data, $status = 200) {
 }
 
 // Captura todos os erros como exceção (para não poluir o JSON)
-set_error_handler(function($severity, $message, $file, $line) {
+set_error_handler(function ($severity, $message, $file, $line) {
     throw new \ErrorException($message, 500, $severity, $file, $line);
 });
 
@@ -33,7 +57,7 @@ try {
     global $USER;
 
     // Parâmetros via GET
-    $category = required_param('category',  PARAM_RAW);
+    $category = required_param('category', PARAM_RAW);
     $key      = required_param('key', PARAM_RAW);
     $value    = required_param('value', PARAM_RAW);
 
@@ -50,7 +74,7 @@ try {
         'CURLOPT_RETURNTRANSFER' => true,
         'CURLOPT_TIMEOUT' => 10,
         'CURLOPT_HTTPHEADER' => ["Authorization: Token $sync_up_auth_token"],
-        'CURLOPT_FAILONERROR' => true
+        'CURLOPT_FAILONERROR' => true,
     ];
 
     $response = $curl->get($url, [], $options);
@@ -60,18 +84,17 @@ try {
         output_json([
             'status' => 'erro',
             'mensagem' => 'Resposta inválida do painel Django',
-            'resposta' => $response
+            'resposta' => $response,
         ], 500);
     }
 
     output_json([
         'status' => 'ok',
-        'data' => $data
+        'data' => $data,
     ]);
-
 } catch (\Exception $e) {
     output_json([
         'status' => 'erro',
-        'mensagem' => $e->getMessage()
+        'mensagem' => $e->getMessage(),
     ], $e->getCode() ?: 500);
 }

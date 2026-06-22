@@ -33,9 +33,7 @@ global $CFG;
 require_once($CFG->dirroot . '/admin/tool/painelava/locallib.php');
 
 class migration_helpers {
-    
-    public static function save_course_custom_field($categoryid, $shortname, $name, $type = 'text', $configdata = '{"required":"0","uniquevalues":"0","displaysize":50,"maxlength":250,"ispassword":"0","link":"","locked":"0","visibility":"0"}')
-    {
+    public static function save_course_custom_field($categoryid, $shortname, $name, $type = 'text', $configdata = '{"required":"0","uniquevalues":"0","displaysize":50,"maxlength":250,"ispassword":"0","link":"","locked":"0","visibility":"0"}') {
         return get_or_create(
             'customfield_field',
             ['shortname' => $shortname],
@@ -43,8 +41,7 @@ class migration_helpers {
         );
     }
 
-    public static function save_user_custom_field($categoryid, $shortname, $name, $datatype = 'text', $visible = 1, $param1value = NULL, $param2value = NULL)
-    {
+    public static function save_user_custom_field($categoryid, $shortname, $name, $datatype = 'text', $visible = 1, $param1value = null, $param2value = null) {
         return get_or_create(
             'user_info_field',
             ['shortname' => $shortname],
@@ -52,8 +49,7 @@ class migration_helpers {
         );
     }
 
-    public static function bulk_course_custom_field()
-    {
+    public static function bulk_course_custom_field() {
         global $DB;
         $cid = get_or_create(
             'customfield_category',
@@ -77,25 +73,24 @@ class migration_helpers {
  * @param int $oldversion Previously installed plugin version.
  * @return bool True when migration steps complete successfully.
  */
-function tool_painelava_migrate($oldversion)
-{
+function tool_painelava_migrate($oldversion) {
     global $DB;
 
     $dbman = $DB->get_manager();
 
     $logging = new \xmldb_table("tool_painelava_logging");
     if (!$dbman->table_exists($logging)) {
-        $logging->add_field("id",                   XMLDB_TYPE_INTEGER, '10',       XMLDB_UNSIGNED, XMLDB_NOTNULL, XMLDB_SEQUENCE,  null, null, null);
-        $logging->add_field("userid",               XMLDB_TYPE_INTEGER, '10',       XMLDB_UNSIGNED, XMLDB_NOTNULL, null,            null, null, null);
-        $logging->add_field("targetuserid",         XMLDB_TYPE_INTEGER, '10',       XMLDB_UNSIGNED, XMLDB_NOTNULL, null,            null, null, null);
-        $logging->add_field("user_ipaddress",       XMLDB_TYPE_CHAR,    '45',       null, null, null,            null, null, null);
-        $logging->add_field("targetuser_ipaddress", XMLDB_TYPE_CHAR,    '45',       null, null, null,            null, null, null);
-        $logging->add_field("timecreated",          XMLDB_TYPE_INTEGER, '10',       XMLDB_UNSIGNED, XMLDB_NOTNULL, null,            null, null, null);
+        $logging->add_field("id", XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NOTNULL, XMLDB_SEQUENCE, null, null, null);
+        $logging->add_field("userid", XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NOTNULL, null, null, null, null);
+        $logging->add_field("targetuserid", XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NOTNULL, null, null, null, null);
+        $logging->add_field("user_ipaddress", XMLDB_TYPE_CHAR, '45', null, null, null, null, null, null);
+        $logging->add_field("targetuser_ipaddress", XMLDB_TYPE_CHAR, '45', null, null, null, null, null, null);
+        $logging->add_field("timecreated", XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NOTNULL, null, null, null, null);
 
-        $logging->add_key("primary",          XMLDB_KEY_PRIMARY,  ["id"],         null,       null);
+        $logging->add_key("primary", XMLDB_KEY_PRIMARY, ["id"], null, null);
 
-        $logging->add_index('idx_users',              XMLDB_INDEX_NOTUNIQUE, ['targetuserid', 'userid']);
-        $logging->add_index('idx_timecreated',        XMLDB_INDEX_NOTUNIQUE, ['timecreated']);
+        $logging->add_index('idx_users', XMLDB_INDEX_NOTUNIQUE, ['targetuserid', 'userid']);
+        $logging->add_index('idx_timecreated', XMLDB_INDEX_NOTUNIQUE, ['timecreated']);
 
         $dbman->create_table($logging);
     }

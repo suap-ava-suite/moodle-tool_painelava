@@ -24,33 +24,18 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-// Core.
-$string['pluginname'] = 'Painel AVA';
-$string['pluginname_desc'] = 'Painel AVA is an admin tool that provides an external API to retrieve course data grouped by type, including custom fields and user roles.';
-
-// Capabilities.
-$string['painelava:view']              = 'View the Painel AVA panel';
-$string['painelava:viewothercourses']  = 'View another user\'s course list';
-
-// Settings.
-$string['auth_token_header'] = 'Painel AVA';
-$string['auth_token_header_desc'] = 'Which will be the token used by Painel AVA to authenticate itself to this Moodle installation.';
-
 $string["auth_token"] = 'Auth token';
 $string["auth_token_desc"] = 'Which will be the token used by Painel AVA to authenticate itself to this Moodle installation.';
-
-$string['painel_url'] = 'Painel AVA URL';
-$string['painel_url_desc'] = 'It is used to update user preference settings (e.g., https://ava.ifrn.edu.br)';
-
+$string['auth_token_header'] = 'Painel AVA';
+$string['auth_token_header_desc'] = 'Which will be the token used by Painel AVA to authenticate itself to this Moodle installation.';
 $string['course_custom_field_sala_tipo'] = 'Course custom field: Sala Tipo';
 $string['course_custom_field_sala_tipo_desc'] = 'This course custom field is used to identify the type of room associated with the course, such as "Laboratory", "Classroom", "Virtual Room", etc. It is essential for categorizing courses based on the learning environment and can be used to filter or organize courses in the Painel AVA.';
-
-
-// Events.
 $string['event_user_courses_requested'] = 'User course list requested';
-
-// Tasks.
-$string['task_sync_courses'] = 'Painel AVA – synchronise course data';
-
-// Errors.
 $string['invaliduser'] = 'The specified user does not exist or has been deleted.';
+$string['painel_url'] = 'Painel AVA URL';
+$string['painel_url_desc'] = 'It is used to update user preference settings (e.g., https://ava.ifrn.edu.br)';
+$string['painelava:view'] = 'View the Painel AVA panel';
+$string['painelava:viewothercourses'] = 'View another user\'s course list';
+$string['pluginname'] = 'Painel AVA';
+$string['pluginname_desc'] = 'Painel AVA is an admin tool that provides an external API to retrieve course data grouped by type, including custom fields and user roles.';
+$string['task_sync_courses'] = 'Painel AVA – synchronise course data';

@@ -34,7 +34,6 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class sync_courses extends \core\task\scheduled_task {
-
     /**
      * Return a localised name for this task.
      *

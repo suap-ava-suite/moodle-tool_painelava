@@ -28,41 +28,33 @@
 
 class tool_painelava_admin_settingspage extends admin_settingpage
 {
-
-    public function __construct($admin_mode)
-    {
+    public function __construct($admin_mode) {
         $plugin_name = 'tool_painelava';
-        parent::__construct($plugin_name, get_string('pluginname', $plugin_name), 'moodle/site:config', false, NULL);
+        parent::__construct($plugin_name, get_string('pluginname', $plugin_name), 'moodle/site:config', false, null);
         $this->setup($admin_mode);
     }
 
-    function _($str, $args = null, $lazyload = false)
-    {
+    function _($str, $args = null, $lazyload = false) {
         return get_string($str, $this->name);
     }
 
-    function add_heading($name)
-    {
+    function add_heading($name) {
         $this->add(new admin_setting_heading("{$this->name}/$name", $this->_($name), $this->_("{$name}_desc")));
     }
 
-    function add_configtext($name, $default = '')
-    {
+    function add_configtext($name, $default = '') {
         $this->add(new admin_setting_configtext("{$this->name}/$name", $this->_($name), $this->_("{$name}_desc"), $default));
     }
 
-    function add_configtextarea($name, $default = '')
-    {
+    function add_configtextarea($name, $default = '') {
         $this->add(new admin_setting_configtextarea("{$this->name}/$name", $this->_($name), $this->_("{$name}_desc"), $default));
     }
 
-    function add_configcheckbox($name, $default = 0)
-    {
+    function add_configcheckbox($name, $default = 0) {
         $this->add(new admin_setting_configcheckbox("{$this->name}/$name", $this->_($name), $this->_("{$name}_desc"), $default));
     }
 
-    function setup($admin_mode)
-    {
+    function setup($admin_mode) {
         global $CFG;
         if ($admin_mode) {
             $this->add_heading('auth_token_header');

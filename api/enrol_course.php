@@ -1,4 +1,25 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ *
+ * @package    tool_painelava
+ * @copyright  2024 IFRN
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 namespace tool_painelava;
 
@@ -12,9 +33,7 @@ require_once("servicelib.php");
 
 class enrol_course_service extends \tool_painelava\service
 {
-
-    function do_call()
-    {
+    function do_call() {
         global $DB, $CFG, $USER;
 
         require_once($CFG->dirroot . '/course/externallib.php');
@@ -47,7 +66,7 @@ class enrol_course_service extends \tool_painelava\service
             $newuser->firstname  = $firstname;
             $newuser->lastname   = $lastname;
             $newuser->email      = $email;
-            $newuser->auth       = get_config('local_suap', 'default_auth') ?: 'manual'; 
+            $newuser->auth       = get_config('local_suap', 'default_auth') ?: 'manual';
             $newuser->timezone   = '99';
             $newuser->confirmed  = 1;
             $newuser->mnethostid = $CFG->mnet_localhost_id;
@@ -57,11 +76,11 @@ class enrol_course_service extends \tool_painelava\service
 
             if (!empty($campus)) {
                 require_once($CFG->dirroot . '/user/profile/lib.php');
-                
+
                 $profiledata = new \stdClass();
                 $profiledata->id = $newuser_id;
-                $profiledata->profile_field_campus_sigla = $campus; 
-                
+                $profiledata->profile_field_campus_sigla = $campus;
+
                 profile_save_data($profiledata);
             }
 
@@ -96,14 +115,14 @@ class enrol_course_service extends \tool_painelava\service
                 return [
                     "status" => "already_enrolled",
                     "message" => "Usuário já possui inscrição ativa.",
-                    "courseid" => $courseid
+                    "courseid" => $courseid,
                 ];
             }
 
             // Se estiver suspensa (status 1), vamos reativar (status 0)
             $plugin = enrol_get_plugin($user_enrolment->enrol);
             $enrol_instance = $DB->get_record('enrol', ['id' => $user_enrolment->enrolid]);
-            
+
             $plugin->update_user_enrol($enrol_instance, $USER->id, 0);
 
             \tool_painelava\group_helper::ensure_user_in_profile_based_group($courseid, $USER->id);
@@ -112,15 +131,15 @@ class enrol_course_service extends \tool_painelava\service
                 "status" => "reactivated",
                 "message" => "Sua inscrição foi reativada. Seu progresso anterior foi recuperado.",
                 "courseid" => $courseid,
-                "viewurl" => "{$CFG->wwwroot}/course/view.php?id={$courseid}"
+                "viewurl" => "{$CFG->wwwroot}/course/view.php?id={$courseid}",
             ];
         }
-        
+
         // 3. Caso não exista (Nova Inscrição)
         $enrol = $DB->get_record('enrol', [
-            'courseid' => $courseid, 
-            'enrol' => 'manual', 
-            'status' => 0
+            'courseid' => $courseid,
+            'enrol' => 'manual',
+            'status' => 0,
         ], '*', MUST_EXIST);
 
         $plugin = enrol_get_plugin('manual');
@@ -132,7 +151,7 @@ class enrol_course_service extends \tool_painelava\service
             "status" => "enrolled",
             "message" => "Inscrição realizada com sucesso.",
             "courseid" => $courseid,
-            "viewurl" => "{$CFG->wwwroot}/course/view.php?id={$courseid}"
+            "viewurl" => "{$CFG->wwwroot}/course/view.php?id={$courseid}",
         ];
     }
 }

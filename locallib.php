@@ -1,5 +1,6 @@
 <?php
 // This file is part of "Moodle Painel AVA Integration"
+//
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -28,8 +29,7 @@
 namespace tool_painelava;
 
 
-function get_last_sort_order($tablename)
-{
+function get_last_sort_order($tablename) {
     global $DB;
 
     if (!\is_string($tablename) || !\preg_match('/^[a-z][a-z0-9_]*$/i', $tablename)) {
@@ -41,8 +41,7 @@ function get_last_sort_order($tablename)
 }
 
 
-function get_or_create($tablename, $keys, $values)
-{
+function get_or_create($tablename, $keys, $values) {
     global $DB;
 
     if (!\is_string($tablename) || !\preg_match('/^[a-z][a-z0-9_]*$/i', $tablename)) {
@@ -58,20 +57,17 @@ function get_or_create($tablename, $keys, $values)
 }
 
 
-function config($name)
-{
+function config($name) {
     return get_config('tool_painelava', $name);
 }
 
 
-function aget($array, $key, $default = null)
-{
+function aget($array, $key, $default = null) {
     return \array_key_exists($key, $array) ? $array[$key] : $default;
 }
 
 
-function get_recordset_as_array($sql, $params)
-{
+function get_recordset_as_array($sql, $params) {
     global $DB;
 
     $result = [];

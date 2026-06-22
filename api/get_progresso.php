@@ -1,4 +1,25 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ *
+ * @package    tool_painelava
+ * @copyright  2024 IFRN
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 namespace tool_painelava;
 
@@ -12,8 +33,7 @@ require_once("servicelib.php");
 
 class get_progresso_service extends \tool_painelava\service
 {
-    function get_progresso($username, $courseids_str = null)
-    {
+    function get_progresso($username, $courseids_str = null) {
         $start_total = microtime(true);
         global $DB, $CFG;
 
@@ -26,12 +46,12 @@ class get_progresso_service extends \tool_painelava\service
 
         $course_filter = "";
         $params = [$userid];
-        
+
         if (!empty($courseids_str)) {
             $courseids = array_map('intval', explode(',', $courseids_str));
             $courseids = array_filter($courseids);
             if (!empty($courseids)) {
-                list($insql, $inparams) = $DB->get_in_or_equal($courseids);
+                [$insql, $inparams] = $DB->get_in_or_equal($courseids);
                 $course_filter = "AND c.id $insql";
                 $params = array_merge($params, $inparams);
             }
@@ -50,10 +70,10 @@ class get_progresso_service extends \tool_painelava\service
         $courses = $DB->get_records_sql($sql, $params);
 
         $result = [];
-        
+
         if ($courses) {
-            require_once($CFG->libdir.'/completionlib.php');
-            
+            require_once($CFG->libdir . '/completionlib.php');
+
             foreach ($courses as $c) {
                 $progress = null;
                 $hasprogress = false;
@@ -69,18 +89,17 @@ class get_progresso_service extends \tool_painelava\service
                 $result[$c->id] = [
                     'id' => $c->id,
                     'progress' => $progress,
-                    'hasprogress' => $hasprogress
+                    'hasprogress' => $hasprogress,
                 ];
             }
         }
 
         error_log('[PROFILER - TOTAL] Tempo total da API (get_progresso): ' . round((microtime(true) - $start_total) * 1000, 2) . 'ms');
-        
+
         return array_values($result);
     }
 
-    function do_call()
-    {
+    function do_call() {
         return $this->get_progresso(
             \tool_painelava\aget($_GET, 'username', null),
             \tool_painelava\aget($_GET, 'courseids', null)

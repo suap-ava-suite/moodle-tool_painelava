@@ -32,15 +32,18 @@ jobs:
         run: |
           VERSION=$(grep -oP '\$plugin->version\s*=\s*\K[0-9]+' version.php)
           RELEASE=$(grep -oP "\\\$plugin->release\s*=\s*'\K[^']+" version.php)
+          COMPONENT=$(grep -oP "\\\$plugin->component\s*=\s*'\K[^']+" version.php)
 
           VERSION_SUFFIX="${VERSION: -2}"
           RELEASE_SUFFIX="${RELEASE##*.}"
+          TAG="${GITHUB_REF_NAME#v}"
+
+          SHORTNAME="${COMPONENT#*_}"
 
           echo "Plugin version: $VERSION (suffix: $VERSION_SUFFIX)"
           echo "Plugin release: $RELEASE (suffix: $RELEASE_SUFFIX)"
-
-          TAG="${GITHUB_REF_NAME#v}"
-
+          echo "Plugin component: $COMPONENT"
+          echo "Plugin shortname: $SHORTNAME"
           echo "Tag (sem prefixo v): $TAG"
 
           # Validação 1: Últimos 2 dígitos devem corresponder
@@ -55,16 +58,29 @@ jobs:
             exit 1
           fi
 
+          # Validação 3: Garantir que o componente foi encontrado
+          if [ -z "$COMPONENT" ]; then
+            echo "::error::A variável \$plugin->component não foi encontrada no version.php."
+            exit 1
+          fi
+
+          # Exporta as variáveis para o próximo passo
           echo "number=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "component=$COMPONENT" >> "$GITHUB_OUTPUT"
+          echo "shortname=$SHORTNAME" >> "$GITHUB_OUTPUT"
 
       - name: Build plugin ZIP
         id: build
-        env:
-          PLUGIN_NAME: imagemap
         run: |
-          mkdir -p /tmp/build/$PLUGIN_NAME
+          # Recupera as variáveis geradas no passo anterior
+          COMPONENT="${{ steps.version.outputs.component }}"
+          SHORTNAME="${{ steps.version.outputs.shortname }}"
+          VERSION="${{ steps.version.outputs.number }}"
+          
+          # 1. Cria a pasta com o nome exato que o instalador do Moodle espera
+          mkdir -p /tmp/build/$SHORTNAME
 
-          # Copy all plugin files, excluding VCS and CI-only directories
+          # 2. Copia os arquivos do repositório, ignorando lixo de desenvolvimento
           rsync -a \
             --exclude='.git' \
             --exclude='.github' \
@@ -72,39 +88,18 @@ jobs:
             --exclude='.gitignore' \
             --exclude='tests' \
             --exclude='vendor' \
-            . /tmp/build/$PLUGIN_NAME/
+            . /tmp/build/$SHORTNAME/
 
           cd /tmp/build
-          zip -r "$GITHUB_WORKSPACE/$PLUGIN_NAME-${{ steps.version.outputs.number }}.zip" $PLUGIN_NAME/
-          echo "zipfile=$PLUGIN_NAME-${{ steps.version.outputs.number }}.zip" >> "$GITHUB_OUTPUT"
+          
+          # 3. Dá ao arquivo ZIP o nome padrão (ex: tool_painelava-2023101000.zip)
+          ZIPFILE="${COMPONENT}-${VERSION}.zip"
+          zip -r "$GITHUB_WORKSPACE/$ZIPFILE" $SHORTNAME/
+          
+          echo "zipfile=$ZIPFILE" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.build.outputs.zipfile }}
           generate_release_notes: true
-
-      # - name: Upload to Moodle Plugin Directory
-      #   if: ${{ env.HAS_MOODLE_TOKEN == 'true' }}
-      #   env:
-      #     HAS_MOODLE_TOKEN: ${{ secrets.MOODLE_DIRECTORY_TOKEN != '' }}
-      #     MOODLE_DIRECTORY_TOKEN: ${{ secrets.MOODLE_DIRECTORY_TOKEN }}
-      #   run: |
-      #     ZIPFILE="${{ steps.build.outputs.zipfile }}"
-          
-      #     RESPONSE=$(curl -s -w "\n%{http_code}" \
-      #       -F data=@"$GITHUB_WORKSPACE/$ZIPFILE" \
-      #       "https://moodle.org/webservice/upload.php?token=$MOODLE_DIRECTORY_TOKEN")
-
-      #     HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-      #     BODY=$(echo "$RESPONSE" | sed '$d')
-
-      #     echo "HTTP status: $HTTP_CODE"
-      #     echo "Response: $BODY"
-
-      #     if [ "$HTTP_CODE" -ne 200 ] || echo "$BODY" | grep -q '"error"'; then
-      #       echo "::error::Falha ao enviar o plugin para o Moodle Plugin Directory"
-      #       exit 1
-      #     fi
-
-      #     echo "✅ Plugin enviado com sucesso para o Moodle Plugin Directory"

@@ -35,7 +35,7 @@ jobs:
           RELEASE=$(grep -oP "\\\$plugin->release\s*=\s*'\K[^']+" version.php)
           COMPONENT=$(grep -oP "\\\$plugin->component\s*=\s*'\K[^']+" version.php)
 
-          VERSION_SUFFIX="${VERSION: -2}"
+          VERSION_SUFFIX="${VERSION: -3}"
           RELEASE_SUFFIX="${RELEASE##*.}"
           TAG="${GITHUB_REF_NAME#v}"
 
@@ -48,9 +48,9 @@ jobs:
           echo "Plugin shortname: $SHORTNAME"
           echo "Tag (sem prefixo v): $TAG"
 
-          # Validação 1: Últimos 2 dígitos devem corresponder
+          # Validação 1: Últimos 3 dígitos devem corresponder
           if [ "$VERSION_SUFFIX" != "$RELEASE_SUFFIX" ]; then
-            echo "::error::Os 2 últimos dígitos de \$plugin->version ($VERSION_SUFFIX) não correspondem aos 2 últimos dígitos de \$plugin->release ($RELEASE_SUFFIX) em version.php"
+            echo "::error::Os 3 últimos dígitos de \$plugin->version ($VERSION_SUFFIX) não correspondem aos 3 últimos dígitos de \$plugin->release ($RELEASE_SUFFIX) em version.php"
             exit 1
           fi
 

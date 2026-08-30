@@ -5,7 +5,7 @@ repos:
     hooks:
       - id: act-test
         name: Validar testes com act
-        entry: act -j test --matrix php:8.3 --matrix database:pgsql
+        entry: act -j test --matrix php:8.3 --matrix database:pgsql --matrix moodle-branch:MOODLE_405_STABLE
         language: system
         pass_filenames: false
         always_run: true

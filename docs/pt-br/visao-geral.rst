@@ -25,7 +25,7 @@ Requisitos
 ----------
 
 * Moodle 4.5.0+ (``$plugin->requires`` = ``2024100710`` em ``version.php``).
-* A esteira de CI (``.github/workflows/moodle-plugin-ci.yml``) testa o plugin contra
+* A esteira de CI (``.github/workflows/ci.yml``) testa o plugin contra
   ``MOODLE_405_STABLE``, ``MOODLE_500_STABLE`` e ``MOODLE_501_STABLE``, com PHP 8.1 a 8.4
   (algumas combinações excluídas por incompatibilidade — PHP 8.4 não é testado com Moodle 4.5,
   PHP 8.1 não é testado com Moodle 5.0+).
@@ -97,7 +97,7 @@ Estrutura do repositório
    ├── test_debug.php                       # Script de depuração via CLI (não é parte da API)
    ├── docs/                                 # Esta documentação (Sphinx)
    └── .github/workflows/
-       ├── moodle-plugin-ci.yml             # moodle-plugin-ci (lint, PHPCS, PHPUnit, Behat...)
+       ├── ci.yml                            # moodle-plugin-ci (lint, PHPCS, PHPUnit, Behat...)
        ├── release.yml                       # Gera ZIP instalável em cada tag
        └── docs.yml                          # Publica esta documentação no GitHub Pages
 

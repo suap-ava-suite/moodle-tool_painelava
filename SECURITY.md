@@ -14,7 +14,7 @@ Apenas a versão mais recente do plugin recebe correções de segurança.
 Se você descobriu uma vulnerabilidade de segurança neste plugin, **não abra uma issue pública**. Siga as etapas abaixo:
 
 1. **Envie um e-mail** para a equipe de desenvolvimento do IFRN descrevendo o problema:
-   - Assunto: `[SECURITY] moodle-tool_painel – <resumo breve>`
+   - Assunto: `[SECURITY] moodle-tool_painelava – <resumo breve>`
    - Descrição detalhada da vulnerabilidade
    - Passos para reprodução
    - Impacto potencial
@@ -31,7 +31,7 @@ Se você descobriu uma vulnerabilidade de segurança neste plugin, **não abra u
 
 Este projeto é um plugin para o **Moodle** (Admin Tool). As vulnerabilidades de interesse incluem, mas não se limitam a:
 
-- Escalada de privilégios ou burla de verificações de capacidade (`tool/painel:viewothercourses`)
+- Escalada de privilégios ou burla de verificações de capacidade (`tool/painelava:viewothercourses`)
 - Exposição indevida de dados de cursos ou usuários através da API externa (`tool_painelava_get_user_courses`)
 - Vazamento ou manipulação do `auth_token` de configuração
 - Injeção SQL ou execução remota de código no contexto do plugin
@@ -44,7 +44,7 @@ Vulnerabilidades no **Moodle core** ou em outros plugins devem ser reportadas di
 - Mantenha o plugin sempre atualizado para a versão mais recente.
 - Mantenha o Moodle atualizado, aplicando todos os patches de segurança oficiais.
 - Armazene o `auth_token` de forma segura; nunca o exponha em logs ou repositórios de código.
-- Conceda a capacidade `tool/painel:viewothercourses` apenas aos papéis estritamente necessários.
+- Conceda a capacidade `tool/painelava:viewothercourses` apenas aos papéis estritamente necessários.
 - Restrinja o acesso ao serviço web externo do Moodle a IPs ou redes confiáveis sempre que possível.
 
 ## Créditos
@@ -53,4 +53,4 @@ Agradecemos a todos que contribuem para a segurança deste projeto de forma resp
 
 ---
 
-© 2024 IFRN – Licença [GNU GPL v3 ou superior](http://www.gnu.org/copyleft/gpl.html)
+© 2026 Kelson da Costa Medeiros – Licença [GNU GPL v3 ou superior](http://www.gnu.org/copyleft/gpl.html)

@@ -22,7 +22,7 @@ Conforme ``GEMINI.md`` (raiz do repositório):
 Versionamento
 -------------
 
-``.github/workflows/moodle-plugin-ci.yml`` roda ``moodle-plugin-ci savepoints``, que verifica a
+``.github/workflows/ci.yml`` roda ``moodle-plugin-ci savepoints``, que verifica a
 consistência entre alterações em ``db/`` (schema, *upgrade steps*) e o incremento de
 ``$plugin->version`` em ``version.php``. Como convenção observada no arquivo atual:
 
@@ -30,7 +30,7 @@ consistência entre alterações em ``db/`` (schema, *upgrade steps*) e o increm
 * ``$plugin->release`` segue o padrão ``4.5.XXX``.
 * ``XXX`` é o mesmo valor nos dois campos.
 
-``.github/workflows/release.yml`` reforça essa regra no momento do *release*: valida que os 2
+``.github/workflows/release.yml`` reforça essa regra no momento do *release*: valida que os 3
 últimos dígitos de ``$plugin->version`` batem com o sufixo de ``$plugin->release``, e que
 ``$plugin->release`` corresponde exatamente ao nome da tag Git usada para disparar o workflow.
 
@@ -42,14 +42,16 @@ consistência entre alterações em ``db/`` (schema, *upgrade steps*) e o increm
 Pre-commit
 -------------
 
-Ao contrário de outros plugins da suíte (por exemplo, ``auth_suap``), este repositório **não**
-contém ``.pre-commit-config.yaml`` nem ``.githooks/`` — não há hook de pre-commit configurado
-neste momento.
+Assim como outros plugins da suíte (por exemplo, ``auth_suap``), este repositório contém
+``.pre-commit-config.yaml`` e ``.githooks/pre-commit``, que rodam
+``act -j test --matrix php:8.3 --matrix database:pgsql --matrix moodle-branch:MOODLE_405_STABLE``
+antes de cada commit. A ativação é feita localmente com
+``git config core.hooksPath .githooks``.
 
 CI/CD
 -----
 
-``.github/workflows/moodle-plugin-ci.yml`` — **Moodle Plugin CI**
+``.github/workflows/ci.yml`` — **Moodle Plugin CI**
     Executa em todo ``push``/``pull_request`` para ``main`` e branches ``MOODLE_*``. Usa
     ``moodlehq/moodle-plugin-ci`` em uma matriz de Moodle (``MOODLE_405_STABLE``,
     ``MOODLE_500_STABLE``, ``MOODLE_501_STABLE``) × PHP (``8.1`` a ``8.4``) × banco (``pgsql``,
@@ -78,15 +80,17 @@ Documentação
 
 Esta documentação usa `Sphinx <https://www.sphinx-doc.org/>`_ com o tema
 `moodle-docs-theme <https://pypi.org/project/moodle-docs-theme/>`_ e arquivos ``.rst`` em
-``docs/``. Para gerar localmente:
+``docs/pt-br/`` (português, este idioma) e ``docs/en/`` (inglês, tradução completa). Para gerar
+localmente:
 
 .. code-block:: bash
 
    pip install sphinx moodle-docs-theme
-   sphinx-build -W -b html docs docs/_build/html
+   sphinx-build -W -b html docs/pt-br docs/_build/html/pt-br
+   sphinx-build -W -b html docs/en docs/_build/html/en
 
-O workflow ``docs.yml`` roda o mesmo comando em CI e publica o resultado via
-``actions/deploy-pages``.
+O workflow ``docs.yml`` roda os mesmos comandos em CI (para os dois idiomas) e publica o
+resultado via ``actions/deploy-pages``.
 
 Testes
 ---------

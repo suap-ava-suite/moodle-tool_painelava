@@ -281,3 +281,12 @@ Exemplo de chamada
 
    GET http://moodle/admin/tool/painelava/api/?get_diarios&username=admin&situacao=inprogress
    Authentication: Token changeme
+
+Auditoria das alterações
+------------------------
+
+Com o ``local_suap`` instalado, as escritas de usuário das APIs (criação on-the-fly, ``campus_sigla``,
+preferências, matrícula) são registradas em ``local_suap_user_audit`` com o ator ``api:painelava`` e
+diff por campo. ``enrol_course`` e ``set_user_preference`` deixaram de sobrescrever ``global $USER``;
+os eventos agora saem com ``userid`` 0 e o rótulo do sistema. ``set_favourite_course`` e
+``set_visible_course`` ainda usam ``$USER`` forjado (pendente).

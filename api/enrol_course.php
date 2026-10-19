@@ -41,7 +41,7 @@ class enrol_course_service extends \tool_painelava\service
      * @throws \Exception If parameters are missing.
      */
     public function do_call() {
-        global $DB, $CFG, $USER;
+        global $DB, $CFG;
 
         require_once($CFG->dirroot . '/course/externallib.php');
         require_once($CFG->dirroot . '/user/lib.php');
@@ -79,19 +79,15 @@ class enrol_course_service extends \tool_painelava\service
             $newuser->mnethostid = $CFG->mnet_localhost_id;
             $newuser->suspended  = 0;
 
-            $newuserid = user_create_user($newuser);
+            $newuserid = \tool_painelava\audit::create_user($newuser);
 
             if (!empty($campus)) {
                 require_once($CFG->dirroot . '/user/profile/lib.php');
 
-                $profiledata = new \stdClass();
-                $profiledata->id = $newuserid;
-                $profiledata->profile_field_campus_sigla = $campus;
-
-                profile_save_data($profiledata);
+                \tool_painelava\audit::save_profile_fields((int) $newuserid, ['campus_sigla' => $campus]);
             }
 
-            $USER = $DB->get_record('user', ['id' => $newuserid], '*', MUST_EXIST);
+            $target = $DB->get_record('user', ['id' => $newuserid], '*', MUST_EXIST);
 
             $defaultprefsstring = get_config('local_suap', 'default_user_preferences');
             if (!empty($defaultprefsstring)) {
@@ -99,12 +95,12 @@ class enrol_course_service extends \tool_painelava\service
                 foreach ($prefslines as $line) {
                     $parts = explode('=', trim($line), 2);
                     if (count($parts) === 2) {
-                        \set_user_preference($parts[0], $parts[1], $USER);
+                        \tool_painelava\audit::set_preference($parts[0], $parts[1], $target);
                     }
                 }
             }
         } else {
-            $USER = $usuariomoodle;
+            $target = $usuariomoodle;
         }
 
         // 1. Busca se já existe uma inscrição (ativa ou suspensa).
@@ -113,7 +109,7 @@ class enrol_course_service extends \tool_painelava\service
             FROM {user_enrolments} ue
             JOIN {enrol} e ON e.id = ue.enrolid
             WHERE e.courseid = ? AND ue.userid = ?
-        ", [$courseid, $USER->id]);
+        ", [$courseid, $target->id]);
 
         // 2. Caso exista, verificamos o status.
         if ($userenrolment) {
@@ -129,9 +125,9 @@ class enrol_course_service extends \tool_painelava\service
             $plugin = enrol_get_plugin($userenrolment->enrol);
             $enrolinstance = $DB->get_record('enrol', ['id' => $userenrolment->enrolid]);
 
-            $plugin->update_user_enrol($enrolinstance, $USER->id, 0);
+            $plugin->update_user_enrol($enrolinstance, $target->id, 0);
 
-            \tool_painelava\group_helper::ensure_user_in_profile_based_group($courseid, $USER->id);
+            \tool_painelava\group_helper::ensure_user_in_profile_based_group($courseid, $target->id);
 
             return [
                 "status" => "reactivated",
@@ -149,9 +145,9 @@ class enrol_course_service extends \tool_painelava\service
         ], '*', MUST_EXIST);
 
         $plugin = enrol_get_plugin('manual');
-        $plugin->enrol_user($enrol, $USER->id, 5);
+        $plugin->enrol_user($enrol, $target->id, 5);
 
-        \tool_painelava\group_helper::ensure_user_in_profile_based_group($courseid, $USER->id);
+        \tool_painelava\group_helper::ensure_user_in_profile_based_group($courseid, $target->id);
 
         return [
             "status" => "enrolled",

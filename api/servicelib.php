@@ -63,6 +63,7 @@ class service {
      */
     public function call() {
         $this->authenticate();
+        \tool_painelava\audit::set_context('api:painelava');
         echo json_encode($this->do_call());
     }
 

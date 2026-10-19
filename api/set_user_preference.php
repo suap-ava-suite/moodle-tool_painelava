@@ -41,7 +41,7 @@ class set_user_preference_service extends \tool_painelava\service
      * @throws \Exception If parameters are missing or user is not found.
      */
     public function do_call() {
-        global $DB, $USER;
+        global $DB;
 
         // Buscar usuário pelo username informado.
         $username = optional_param('username', null, PARAM_USERNAME);
@@ -49,8 +49,8 @@ class set_user_preference_service extends \tool_painelava\service
             throw new \Exception("Parâmetro 'username' é obrigatório", 400);
         }
 
-        $USER = $DB->get_record('user', ['username' => strtolower($_GET['username'])]);
-        if (!$USER) {
+        $target = $DB->get_record('user', ['username' => strtolower($_GET['username'])]);
+        if (!$target) {
             throw new \Exception('Usuário não encontrado.', 404);
         }
 
@@ -72,16 +72,16 @@ class set_user_preference_service extends \tool_painelava\service
         } else {
             $value = (string)$value;
         }
-        set_user_preference($name, $value, $USER->id);
+        \tool_painelava\audit::set_preference($name, $value, $target->id);
 
         // Retorna uma resposta simples em JSON.
         return [
             'error' => false,
             'message' => 'Preferência atualizada com sucesso',
             'user' => [
-                'id' => $USER->id,
-                'username' => $USER->username,
-                'fullname' => fullname($USER),
+                'id' => $target->id,
+                'username' => $target->username,
+                'fullname' => fullname($target),
             ],
             'preference' => [
                 'name' => $name,

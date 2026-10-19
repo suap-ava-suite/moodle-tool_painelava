@@ -281,3 +281,12 @@ Example call
 
    GET http://moodle/admin/tool/painelava/api/?get_diarios&username=admin&situacao=inprogress
    Authentication: Token changeme
+
+Change audit
+------------
+
+With ``local_suap`` installed, user writes made by the APIs (on-the-fly creation, ``campus_sigla``,
+preferences, enrolment) are recorded in ``local_suap_user_audit`` with actor ``api:painelava`` and a
+per-field diff. ``enrol_course`` and ``set_user_preference`` no longer overwrite ``global $USER``; events
+now carry ``userid`` 0 and the system label. ``set_favourite_course`` and ``set_visible_course`` still
+use a forged ``$USER`` (pending).

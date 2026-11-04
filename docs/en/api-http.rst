@@ -65,6 +65,8 @@ v1 endpoints (``api/``)
      - ``api/get_atualizacoes_counts.php`` — implemented
    * - ``get_course_info``
      - ``api/get_course_info.php`` — implemented
+   * - ``get_diagnostico_usuario``
+     - ``api/get_diagnostico_usuario.php`` — implemented (read-only)
    * - ``set_favourite_course``
      - ``api/set_favourite_course.php`` — implemented
    * - ``set_visible_course``
@@ -232,6 +234,25 @@ Takes ``username`` and ``courseid``. If there is no enrolment, returns ``not_enr
 already suspended, returns ``already_suspended``; otherwise, suspends it (``status = 1``) via
 ``$plugin->update_user_enrol()`` and returns ``suspended``. Unlike removing an enrolment, the
 student's progress data is preserved.
+
+``get_diagnostico_usuario``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Read-only; used by the Painel AVA *Diagnosticar* tool. Takes ``username`` (case-insensitive).
+If the account does not exist, returns
+``{"exists": false, "username": ..., "autoinscricoes": [...]}`` (the course list, with a null ``enrolment``). Otherwise returns:
+
+* ``user``: ``id``, ``username``, ``auth``, ``suspended``, ``deleted``, ``firstaccess``,
+  ``lastaccess``, ``lastlogin``, ``currentlogin``;
+* ``enrolments``: number of courses with ``active``, ``suspended`` and ``total`` enrolments. An
+  enrolment is active only if ``user_enrolments.status = 0``, the ``enrol`` instance is enabled and
+  the current time is between ``timestart`` and ``timeend``;
+* ``autoinscricoes``: every course with ``restricoes_de_autoinscricao`` filled in, **hidden ones
+  included** (``visible``), with the rule and ``enrolment`` (``null`` or ``status``, ``enrol``,
+  ``timestart``, ``timeend``, ``user_enrolment_suspended``, ``enrol_instance_enabled``,
+  ``expired``, ``not_started``).
+
+The logic lives in ``classes/diagnostico.php`` (tested in ``tests/diagnostico_test.php``).
 
 v2 endpoints (``api/v2/``)
 -------------------------------

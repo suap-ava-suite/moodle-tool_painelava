@@ -65,6 +65,8 @@ Endpoints v1 (``api/``)
      - ``api/get_atualizacoes_counts.php`` — implementado
    * - ``get_course_info``
      - ``api/get_course_info.php`` — implementado
+   * - ``get_diagnostico_usuario``
+     - ``api/get_diagnostico_usuario.php`` — implementado (somente leitura)
    * - ``set_favourite_course``
      - ``api/set_favourite_course.php`` — implementado
    * - ``set_visible_course``
@@ -232,6 +234,26 @@ Recebe ``username`` e ``courseid``. Se não houver matrícula, retorna ``not_enr
 suspensa, retorna ``already_suspended``; caso contrário, suspende (``status = 1``) via
 ``$plugin->update_user_enrol()`` e retorna ``suspended``. Diferente de uma remoção de matrícula,
 os dados de progresso do aluno são preservados.
+
+``get_diagnostico_usuario``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Somente leitura; usado pela ferramenta *Diagnosticar* do Painel AVA. Recebe ``username``
+(*case-insensitive*). Se a conta não existir, retorna ``{"exists": false, "username": ..., "autoinscricoes": [...]}``
+(a lista de cursos, com ``enrolment`` nulo).
+Caso exista, retorna:
+
+* ``user``: ``id``, ``username``, ``auth``, ``suspended``, ``deleted``, ``firstaccess``,
+  ``lastaccess``, ``lastlogin``, ``currentlogin``;
+* ``enrolments``: contagem de cursos com inscrição ``active``, ``suspended`` e ``total``. Uma
+  inscrição só é ativa se ``user_enrolments.status = 0``, a instância de ``enrol`` está habilitada
+  e a data atual está entre ``timestart`` e ``timeend``;
+* ``autoinscricoes``: todos os cursos com o campo ``restricoes_de_autoinscricao`` preenchido,
+  **inclusive ocultos** (``visible``), com a regra e ``enrolment`` (``null`` ou ``status``,
+  ``enrol``, ``timestart``, ``timeend``, ``user_enrolment_suspended``,
+  ``enrol_instance_enabled``, ``expired``, ``not_started``).
+
+A lógica fica em ``classes/diagnostico.php`` (testada em ``tests/diagnostico_test.php``).
 
 Endpoints v2 (``api/v2/``)
 -------------------------------

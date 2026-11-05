@@ -69,6 +69,7 @@ try {
         'get_progresso',
         'get_atualizacoes_counts',
         'get_course_info',
+        'get_diagnostico_usuario',
 
         'set_favourite_course',
         'set_visible_course',
